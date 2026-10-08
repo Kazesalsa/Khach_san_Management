@@ -75,13 +75,47 @@ CREATE TABLE IF NOT EXISTS gia_phong (
     FOREIGN KEY (ma_loai_phong) REFERENCES loai_phong(id) ON DELETE RESTRICT
 );
 
+DO $$ BEGIN
+    CREATE TYPE trang_thai_dat_phong_enum AS ENUM ('CHO_XAC_NHAN', 'DA_DAT', 'DA_NHAN', 'DA_TRA_PHONG', 'CHO_HUY', 'DA_HUY');
+EXCEPTION
+    WHEN duplicate_object THEN null;
+END $$;
+
 CREATE TABLE IF NOT EXISTS phieu_dat_phong (
     id VARCHAR(36) PRIMARY KEY,
-    ten_khach_hang VARCHAR(255) NOT NULL,
-    so_dien_thoai VARCHAR(50),
-    ngay_nhan_phong DATE NOT NULL,
-    ngay_tra_phong DATE NOT NULL,
+    ma_dat_phong VARCHAR(20) UNIQUE NOT NULL,
+    khach_hang_id VARCHAR(36) NOT NULL,
+    nhan_vien_tao_id VARCHAR(36),
+    ngay_tao TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    kenh_dat VARCHAR(50) NOT NULL,
+    tong_tien_du_kien DECIMAL(12, 2) DEFAULT 0 CHECK (tong_tien_du_kien >= 0),
+    tien_coc_yeu_cau DECIMAL(12, 2) DEFAULT 0 CHECK (tien_coc_yeu_cau >= 0),
+    trang_thai trang_thai_dat_phong_enum NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS chi_tiet_dat_phong (
+    id VARCHAR(36) PRIMARY KEY,
+    phieu_dat_phong_id VARCHAR(36) NOT NULL,
     phong_id VARCHAR(36) NOT NULL,
-    trang_thai VARCHAR(50) NOT NULL, 
-    FOREIGN KEY (phong_id) REFERENCES phong(id) ON DELETE CASCADE
+    ngay_nhan_du_kien DATE NOT NULL,
+    ngay_tra_du_kien DATE NOT NULL CHECK (ngay_tra_du_kien > ngay_nhan_du_kien),
+    so_khach INT NOT NULL CHECK (so_khach > 0),
+    thoi_gian_nhan_thuc_te TIMESTAMP,
+    thoi_gian_tra_thuc_te TIMESTAMP,
+    trang_thai VARCHAR(50) NOT NULL,
+    nhan_vien_nhan_id VARCHAR(36),
+    nhan_vien_tra_id VARCHAR(36),
+    hoa_don_id VARCHAR(36),
+    FOREIGN KEY (phieu_dat_phong_id) REFERENCES phieu_dat_phong(id) ON DELETE CASCADE,
+    FOREIGN KEY (phong_id) REFERENCES phong(id) ON DELETE RESTRICT
+);
+
+
+CREATE TABLE IF NOT EXISTS quyen_loi_ap_dung (
+    id VARCHAR(36) PRIMARY KEY,
+    phieu_dat_phong_id VARCHAR(36) NOT NULL,
+    ten_quyen_loi VARCHAR(150) NOT NULL,
+    gia_tri VARCHAR(255),
+    trang_thai VARCHAR(50) DEFAULT 'DA_CHON',
+    FOREIGN KEY (phieu_dat_phong_id) REFERENCES phieu_dat_phong(id) ON DELETE RESTRICT
 );
