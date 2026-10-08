@@ -1,0 +1,32 @@
+.auth-shell {
+  min-height: 100vh;
+  color: #20262b;
+  font-family: "Plus Jakarta Sans", sans-serif;
+  background:
+    radial-gradient(circle at 92% 8%, rgba(198, 161, 91, 0.1), transparent 30%),
+    #f8f5ee;
+}
+
+.auth-shell button:not(:disabled),
+.auth-shell a {
+  cursor: pointer;
+}
+
+.auth-shell button:focus-visible,
+.auth-shell a:focus-visible,
+.auth-shell input:focus-visible,
+.auth-shell input[type="checkbox"]:focus-visible {
+  outline: 2px solid #c6a15b;
+  outline-offset: 3px;
+}
+
+.auth-visual {
+  background:
+    linear-gradient(
+      145deg,
+      rgba(11, 31, 42, 0.94) 0%,
+      rgba(19, 42, 58, 0.8) 52%,
+      rgba(93, 72, 38, 0.58) 100%
+    ),
+    url("../assets/auth/hotel.jpg") center / cover no-repeat;
+}
