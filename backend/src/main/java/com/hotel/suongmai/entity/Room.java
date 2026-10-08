@@ -4,20 +4,36 @@ import jakarta.persistence.*;
 import lombok.Data;
 
 @Entity
-@Table(name = "room")
+@Table(name = "phong")
 @Data
 public class Room {
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    @GeneratedValue(strategy = GenerationType.UUID)
+    private String id;
 
-    @Column(name = "room_number", nullable = false, unique = true)
+    @Column(name = "ma_phong", nullable = false)
+    private String roomCode;
+
+    @Column(name = "so_phong", nullable = false, unique = true)
     private String roomNumber;
 
-    @Column(nullable = false)
-    private String status;
+    @Column(name = "tang", nullable = false)
+    private Integer floor;
 
     @ManyToOne
-    @JoinColumn(name = "room_category_id", nullable = false)
+    @JoinColumn(name = "ma_loai_phong", nullable = false)
     private RoomCategory roomCategory;
+
+    @Enumerated(EnumType.STRING)
+    @org.hibernate.annotations.JdbcTypeCode(org.hibernate.type.SqlTypes.NAMED_ENUM)
+    @Column(name = "trang_thai_su_dung", nullable = false)
+    private UsageStatus usageStatus;
+
+    @Enumerated(EnumType.STRING)
+    @org.hibernate.annotations.JdbcTypeCode(org.hibernate.type.SqlTypes.NAMED_ENUM)
+    @Column(name = "trang_thai_don_dep", nullable = false)
+    private CleaningStatus cleaningStatus;
+
+    @OneToMany(mappedBy = "room", cascade = CascadeType.ALL, orphanRemoval = true)
+    private java.util.List<RoomImage> images;
 }

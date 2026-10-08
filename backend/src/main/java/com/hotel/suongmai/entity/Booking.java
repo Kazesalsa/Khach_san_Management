@@ -5,29 +5,29 @@ import lombok.Data;
 import java.time.LocalDate;
 
 @Entity
-@Table(name = "booking")
+@Table(name = "phieu_dat_phong")
 @Data
 public class Booking {
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    @GeneratedValue(strategy = GenerationType.UUID)
+    private String id;
 
-    @Column(name = "customer_name", nullable = false)
+    @Column(name = "ten_khach_hang", nullable = false)
     private String customerName;
 
-    @Column(name = "customer_phone")
+    @Column(name = "so_dien_thoai")
     private String customerPhone;
 
-    @Column(name = "check_in_date", nullable = false)
+    @Column(name = "ngay_nhan_phong", nullable = false)
     private LocalDate checkInDate;
 
-    @Column(name = "check_out_date", nullable = false)
+    @Column(name = "ngay_tra_phong", nullable = false)
     private LocalDate checkOutDate;
 
     @ManyToOne
-    @JoinColumn(name = "room_id", nullable = false)
+    @JoinColumn(name = "phong_id", nullable = false)
     private Room room;
 
-    @Column(nullable = false)
+    @Column(name = "trang_thai", nullable = false)
     private String status;
 }
