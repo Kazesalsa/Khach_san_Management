@@ -164,12 +164,47 @@ BEGIN
     END LOOP;
 END $$;
 
+-- Generate 50 Customers
+DO $$
+DECLARE
+    i INT;
+    rand_cccd VARCHAR(20);
+    rand_phone VARCHAR(15);
+    is_vip BOOLEAN;
+    vip_rank VARCHAR(20);
+BEGIN
+    FOR i IN 1..50 LOOP
+        rand_cccd := '079' || lpad(floor(random() * 1000000000)::TEXT, 9, '0');
+        rand_phone := '09' || lpad(floor(random() * 100000000)::TEXT, 8, '0');
+        
+        -- Thêm vào bảng khach_hang
+        INSERT INTO khach_hang (id, ho_ten, so_dien_thoai, cccd_ho_chieu, email, so_thich_phong, ngay_tao)
+        VALUES (
+            'customer-' || i,
+            'Khach hang ' || i,
+            rand_phone,
+            rand_cccd,
+            'khachhang' || i || '@example.com',
+            'Thích phòng yên tĩnh, view biển',
+            CURRENT_TIMESTAMP
+        );
+        
+        -- Random 20% là khách VIP
+        is_vip := random() < 0.2;
+        IF is_vip THEN
+            IF random() < 0.5 THEN vip_rank := 'VANG'; ELSE vip_rank := 'BACH_KIM'; END IF;
+            INSERT INTO khach_hang_vip (khach_hang_id, hang_vip) VALUES ('customer-' || i, vip_rank::hang_vip_enum);
+        END IF;
+    END LOOP;
+END $$;
+
 -- Generate 100 Random Bookings for 50 rooms
 DO $$
 DECLARE
     i INT;
     rand_room_floor INT;
     rand_room_num INT;
+    rand_customer_id INT;
     room_id VARCHAR(36);
     checkin DATE;
     checkout DATE;
@@ -179,6 +214,7 @@ BEGIN
     FOR i IN 1..100 LOOP
         rand_room_floor := floor(random() * 5 + 1)::INT;
         rand_room_num := floor(random() * 10 + 1)::INT;
+        rand_customer_id := floor(random() * 50 + 1)::INT;
         room_id := 'room-' || rand_room_floor || TO_CHAR(rand_room_num, 'fm00');
         
         -- Random checkin date between Jan 1, 2026 and Dec 15, 2026
@@ -193,11 +229,10 @@ BEGIN
         ELSE status_val := 'COMPLETED';
         END IF;
 
-        INSERT INTO phieu_dat_phong (id, ten_khach_hang, so_dien_thoai, ngay_nhan_phong, ngay_tra_phong, phong_id, trang_thai) 
+        INSERT INTO phieu_dat_phong (id, khach_hang_id, ngay_nhan_phong, ngay_tra_phong, phong_id, trang_thai) 
         VALUES (
             'book-rand-' || i, 
-            'Khach hang ' || i, 
-            '09' || lpad(floor(random() * 100000000)::TEXT, 8, '0'), 
+            'customer-' || rand_customer_id, 
             checkin, 
             checkout, 
             room_id, 

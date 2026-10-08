@@ -12,11 +12,9 @@ public class Booking {
     @GeneratedValue(strategy = GenerationType.UUID)
     private String id;
 
-    @Column(name = "ten_khach_hang", nullable = false)
-    private String customerName;
-
-    @Column(name = "so_dien_thoai")
-    private String customerPhone;
+    @ManyToOne
+    @JoinColumn(name = "khach_hang_id", nullable = false)
+    private KhachHang customer;
 
     @Column(name = "ngay_nhan_phong", nullable = false)
     private LocalDate checkInDate;

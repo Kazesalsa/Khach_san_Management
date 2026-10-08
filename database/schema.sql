@@ -75,13 +75,35 @@ CREATE TABLE IF NOT EXISTS gia_phong (
     FOREIGN KEY (ma_loai_phong) REFERENCES loai_phong(id) ON DELETE RESTRICT
 );
 
+DO $$ BEGIN
+    CREATE TYPE hang_vip_enum AS ENUM ('VANG', 'BACH_KIM');
+EXCEPTION
+    WHEN duplicate_object THEN null;
+END $$;
+
+CREATE TABLE IF NOT EXISTS khach_hang (
+    id VARCHAR(36) PRIMARY KEY,
+    ho_ten VARCHAR(100) NOT NULL,
+    so_dien_thoai VARCHAR(15) UNIQUE NOT NULL,
+    cccd_ho_chieu VARCHAR(20) UNIQUE,
+    email VARCHAR(150),
+    so_thich_phong VARCHAR(255),
+    ngay_tao TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS khach_hang_vip (
+    khach_hang_id VARCHAR(36) PRIMARY KEY,
+    hang_vip hang_vip_enum NOT NULL,
+    FOREIGN KEY (khach_hang_id) REFERENCES khach_hang(id) ON DELETE CASCADE
+);
+
 CREATE TABLE IF NOT EXISTS phieu_dat_phong (
     id VARCHAR(36) PRIMARY KEY,
-    ten_khach_hang VARCHAR(255) NOT NULL,
-    so_dien_thoai VARCHAR(50),
+    khach_hang_id VARCHAR(36) NOT NULL,
     ngay_nhan_phong DATE NOT NULL,
     ngay_tra_phong DATE NOT NULL,
     phong_id VARCHAR(36) NOT NULL,
     trang_thai VARCHAR(50) NOT NULL, 
-    FOREIGN KEY (phong_id) REFERENCES phong(id) ON DELETE CASCADE
+    FOREIGN KEY (phong_id) REFERENCES phong(id) ON DELETE CASCADE,
+    FOREIGN KEY (khach_hang_id) REFERENCES khach_hang(id) ON DELETE RESTRICT
 );
