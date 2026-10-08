@@ -10,13 +10,11 @@ CREATE TABLE IF NOT EXISTS loai_phong (
     suc_chua_toi_da INT NOT NULL CHECK (suc_chua_toi_da > 0)
 );
 
-
-
-DO $$ BEGIN
+DO \$\$ BEGIN
     CREATE TYPE trang_thai_tien_nghi_enum AS ENUM ('HOAT_DONG', 'NGUNG_SU_DUNG');
 EXCEPTION
     WHEN duplicate_object THEN null;
-END $$;
+END \$\$;
 
 CREATE TABLE IF NOT EXISTS tien_nghi (
     id VARCHAR(36) PRIMARY KEY,
@@ -33,17 +31,17 @@ CREATE TABLE IF NOT EXISTS loai_phong_tien_nghi (
     FOREIGN KEY (tien_nghi_id) REFERENCES tien_nghi(id) ON DELETE RESTRICT
 );
 
-DO $$ BEGIN
+DO \$\$ BEGIN
     CREATE TYPE trang_thai_su_dung_enum AS ENUM ('TRONG', 'DA_DAT', 'DANG_O');
 EXCEPTION
     WHEN duplicate_object THEN null;
-END $$;
+END \$\$;
 
-DO $$ BEGIN
+DO \$\$ BEGIN
     CREATE TYPE trang_thai_don_dep_enum AS ENUM ('CHUA_DON', 'DANG_DON', 'DA_DON_XONG');
 EXCEPTION
     WHEN duplicate_object THEN null;
-END $$;
+END \$\$;
 
 CREATE TABLE IF NOT EXISTS phong (
     id VARCHAR(36) PRIMARY KEY,
@@ -75,11 +73,33 @@ CREATE TABLE IF NOT EXISTS gia_phong (
     FOREIGN KEY (ma_loai_phong) REFERENCES loai_phong(id) ON DELETE RESTRICT
 );
 
-DO $$ BEGIN
+DO \$\$ BEGIN
     CREATE TYPE trang_thai_dat_phong_enum AS ENUM ('CHO_XAC_NHAN', 'DA_DAT', 'DA_NHAN', 'DA_TRA_PHONG', 'CHO_HUY', 'DA_HUY');
 EXCEPTION
     WHEN duplicate_object THEN null;
-END $$;
+END \$\$;
+
+DO \$\$ BEGIN
+    CREATE TYPE hang_vip_enum AS ENUM ('VANG', 'BACH_KIM');
+EXCEPTION
+    WHEN duplicate_object THEN null;
+END \$\$;
+
+CREATE TABLE IF NOT EXISTS khach_hang (
+    id VARCHAR(36) PRIMARY KEY,
+    ho_ten VARCHAR(100) NOT NULL,
+    so_dien_thoai VARCHAR(15) UNIQUE NOT NULL,
+    cccd_ho_chieu VARCHAR(20) UNIQUE,
+    email VARCHAR(150),
+    so_thich_phong VARCHAR(255),
+    ngay_tao TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS khach_hang_vip (
+    khach_hang_id VARCHAR(36) PRIMARY KEY,
+    hang_vip hang_vip_enum NOT NULL,
+    FOREIGN KEY (khach_hang_id) REFERENCES khach_hang(id) ON DELETE CASCADE
+);
 
 CREATE TABLE IF NOT EXISTS phieu_dat_phong (
     id VARCHAR(36) PRIMARY KEY,
@@ -90,7 +110,8 @@ CREATE TABLE IF NOT EXISTS phieu_dat_phong (
     kenh_dat VARCHAR(50) NOT NULL,
     tong_tien_du_kien DECIMAL(12, 2) DEFAULT 0 CHECK (tong_tien_du_kien >= 0),
     tien_coc_yeu_cau DECIMAL(12, 2) DEFAULT 0 CHECK (tien_coc_yeu_cau >= 0),
-    trang_thai trang_thai_dat_phong_enum NOT NULL
+    trang_thai trang_thai_dat_phong_enum NOT NULL,
+    FOREIGN KEY (khach_hang_id) REFERENCES khach_hang(id) ON DELETE RESTRICT
 );
 
 CREATE TABLE IF NOT EXISTS chi_tiet_dat_phong (
@@ -109,7 +130,6 @@ CREATE TABLE IF NOT EXISTS chi_tiet_dat_phong (
     FOREIGN KEY (phieu_dat_phong_id) REFERENCES phieu_dat_phong(id) ON DELETE CASCADE,
     FOREIGN KEY (phong_id) REFERENCES phong(id) ON DELETE RESTRICT
 );
-
 
 CREATE TABLE IF NOT EXISTS quyen_loi_ap_dung (
     id VARCHAR(36) PRIMARY KEY,

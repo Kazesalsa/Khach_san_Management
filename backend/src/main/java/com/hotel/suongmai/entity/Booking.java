@@ -15,8 +15,9 @@ public class Booking {
     @Column(name = "ma_dat_phong", length = 20, unique = true, nullable = false)
     private String bookingCode;
 
-    @Column(name = "khach_hang_id", nullable = false)
-    private String customerId;
+    @ManyToOne
+    @JoinColumn(name = "khach_hang_id", nullable = false)
+    private KhachHang customer;
 
     @Column(name = "nhan_vien_tao_id")
     private String creatorId;
