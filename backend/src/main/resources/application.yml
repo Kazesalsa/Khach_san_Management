@@ -1,0 +1,25 @@
+spring:
+  application:
+    name: suongmai
+
+  datasource:
+    # URL kết nối tới PostgreSQL container đang mở tại localhost:5432
+    url: jdbc:postgresql://localhost:5432/suongmai_db
+    username: postgres
+    password: 12345
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    # hibernate ddl-auto:
+    # - "update": Tự động cập nhật bảng theo các @Entity class mà không xóa dữ liệu cũ
+    # - "validate": Chỉ kiểm tra cấu trúc bảng đã khớp chưa (an toàn hơn khi đã có schema.sql)
+    hibernate:
+      ddl-auto: validate
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+
+    server:
+      port: 8000
