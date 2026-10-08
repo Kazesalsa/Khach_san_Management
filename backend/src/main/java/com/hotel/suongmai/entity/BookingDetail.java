@@ -49,6 +49,7 @@ public class BookingDetail {
     @Column(name = "nhan_vien_tra_id")
     private String checkOutStaffId;
 
-    @Column(name = "hoa_don_id")
-    private String invoiceId;
+    @ManyToOne
+    @JoinColumn(name = "hoa_don_id")
+    private HoaDon invoice;
 }
