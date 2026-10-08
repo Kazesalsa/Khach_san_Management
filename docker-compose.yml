@@ -1,4 +1,4 @@
-version: '3.8'
+# version line removed as it's obsolete for Docker Compose v2
 services:
   postgres:
     image: postgres:15-alpine
