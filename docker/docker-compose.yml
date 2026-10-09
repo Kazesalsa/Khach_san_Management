@@ -12,7 +12,7 @@ services:
     volumes:
       - pgdata:/var/lib/postgresql/data
       # Mount thư mục database vào initdb để Docker tự động chạy script khi khởi tạo DB lần đầu
-      - ./database:/docker-entrypoint-initdb.d
+      - ../database:/docker-entrypoint-initdb.d
     restart: unless-stopped
 
   # Tuỳ chọn: Thêm pgAdmin để xem Database trên Web
