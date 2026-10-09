@@ -6,6 +6,7 @@ import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.Customizer;
@@ -62,16 +63,30 @@ public class SecurityConfig {
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .exceptionHandling(exceptions -> exceptions
                     .authenticationEntryPoint((request, response, exception) -> {
-                        response.setStatus(401);
+                        boolean isPriceListRequest = request.getRequestURI()
+                                .startsWith("/api/price-lists");
+                        response.setStatus(isPriceListRequest
+                                ? HttpStatus.FORBIDDEN.value()
+                                : HttpStatus.UNAUTHORIZED.value());
+                        response.setCharacterEncoding(StandardCharsets.UTF_8.name());
+                        response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+                        String message = isPriceListRequest
+                                ? "Bạn không có quyền thực hiện thao tác này"
+                                : "Token không hợp lệ hoặc đã hết hạn";
+                        response.getWriter().write("{\"message\":\"" + message + "\"}");
+                    })
+                    .accessDeniedHandler((request, response, exception) -> {
+                        response.setStatus(HttpStatus.FORBIDDEN.value());
                         response.setCharacterEncoding(StandardCharsets.UTF_8.name());
                         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
                         response.getWriter().write(
-                                "{\"message\":\"Token không hợp lệ hoặc đã hết hạn\"}");
+                                "{\"message\":\"Bạn không có quyền thực hiện thao tác này\"}");
                     }))
             .authorizeHttpRequests(auth -> auth
                     // Cho phép public API đăng nhập và kiểm tra hệ thống
                     .requestMatchers(HttpMethod.POST, "/api/auth/login").permitAll()
                     .requestMatchers("/api/test").permitAll()
+                    .requestMatchers("/api/price-lists/**").hasRole("CHU_KHACH_SAN")
                     // Tất cả các API còn lại đều phải có JWT Token hợp lệ
                     .anyRequest().authenticated()
             );
