@@ -15,12 +15,13 @@ public class Booking {
     @Column(name = "ma_dat_phong", length = 20, unique = true, nullable = false)
     private String bookingCode;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "khach_hang_id", nullable = false)
     private KhachHang customer;
 
-    @Column(name = "nhan_vien_tao_id")
-    private String creatorId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "nhan_vien_tao_id")
+    private NhanVien creator;
 
     @Column(name = "ngay_tao", insertable = false, updatable = false)
     private java.time.LocalDateTime createdAt;
