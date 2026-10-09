@@ -45,6 +45,7 @@ public class HoaDon {
     @Column(name = "thoi_gian_chot")
     private LocalDateTime finalizedAt;
 
-    @Column(name = "nhan_vien_chot_id")
-    private String finalizedByStaffId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "nhan_vien_chot_id")
+    private NhanVien finalizedByStaff;
 }

@@ -46,6 +46,7 @@ public class ThanhToan {
     @JoinColumn(name = "hoa_don_id")
     private HoaDon invoice;
 
-    @Column(name = "nhan_vien_thu_id", nullable = false)
-    private String cashierStaffId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "nhan_vien_thu_id", nullable = false)
+    private NhanVien cashierStaff;
 }
