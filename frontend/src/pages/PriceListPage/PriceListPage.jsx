@@ -55,6 +55,7 @@ function PriceListPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [form, setForm] = useState(EMPTY_FORM);
+  const [formError, setFormError] = useState('');
 
   const getCategoryName = (categoryId) =>
     ROOM_CATEGORIES.find((category) => category.value === categoryId)?.label ||
@@ -70,6 +71,7 @@ function PriceListPage() {
   const openCreateForm = () => {
     setEditingId(null);
     setForm(EMPTY_FORM);
+    setFormError('');
     setIsModalOpen(true);
   };
 
@@ -81,6 +83,7 @@ function PriceListPage() {
       endDate: item.endDate,
       price: String(item.price),
     });
+    setFormError('');
     setIsModalOpen(true);
   };
 
@@ -88,10 +91,18 @@ function PriceListPage() {
     setIsModalOpen(false);
     setEditingId(null);
     setForm(EMPTY_FORM);
+    setFormError('');
   };
 
   const handleSubmit = (event) => {
     event.preventDefault();
+
+    setFormError('');
+
+    if (form.endDate < form.startDate) {
+      setFormError('Ngày kết thúc phải lớn hơn hoặc bằng ngày bắt đầu.');
+      return;
+    }
 
     const newData = {
       roomCategoryId: form.roomCategoryId,
@@ -284,6 +295,14 @@ function PriceListPage() {
             required
             helperText="Đơn vị: VNĐ / đêm"
           />
+
+          {formError && (
+            <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3">
+              <p className="text-sm font-semibold text-red-600">
+                {formError}
+              </p>
+            </div>
+          )}
 
           <div className="flex justify-end gap-3 pt-3 border-t border-border-custom">
             <Button
