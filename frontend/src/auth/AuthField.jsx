@@ -1,5 +1,12 @@
 import { useState } from "react";
-import { Eye, EyeOff, Mail, LockKeyhole, CircleAlert } from "lucide-react";
+import {
+  Eye,
+  EyeOff,
+  Mail,
+  LockKeyhole,
+  CircleAlert,
+  User,
+} from "lucide-react";
 
 export default function AuthField({
   name,
@@ -13,7 +20,26 @@ export default function AuthField({
   disabled,
 }) {
   const [visible, setVisible] = useState(false);
-  const secret = name !== "email";
+
+  const secret = name === "password" || name === "confirm";
+  const isEmail = name === "email";
+  const isUsername = name === "username";
+
+  const inputType = secret
+    ? visible
+      ? "text"
+      : "password"
+    : isEmail
+      ? "email"
+      : "text";
+
+  const placeholder = secret
+    ? "Nhập mật khẩu của bạn"
+    : isEmail
+      ? "ban@email.com"
+      : isUsername
+        ? "Nhập tên đăng nhập"
+        : "";
 
   return (
     <div>
@@ -29,13 +55,19 @@ export default function AuthField({
 
       <div className="relative">
         <span className="pointer-events-none absolute left-4 top-4 text-text-secondary">
-          {secret ? <LockKeyhole size={18} /> : <Mail size={18} />}
+          {secret ? (
+            <LockKeyhole size={18} />
+          ) : isEmail ? (
+            <Mail size={18} />
+          ) : (
+            <User size={18} />
+          )}
         </span>
 
         <input
           id={name}
           name={name}
-          type={secret ? (visible ? "text" : "password") : "email"}
+          type={inputType}
           required
           value={value}
           disabled={disabled}
@@ -46,9 +78,13 @@ export default function AuthField({
           autoCapitalize="none"
           aria-invalid={!!error}
           aria-describedby={
-            error ? `${name}-error` : hint ? `${name}-hint` : undefined
+            error
+              ? `${name}-error`
+              : hint
+                ? `${name}-hint`
+                : undefined
           }
-          placeholder={secret ? "Nhập mật khẩu của bạn" : "ban@email.com"}
+          placeholder={placeholder}
           className={`h-[52px] w-full rounded-xl border bg-surface pl-11 ${
             secret ? "pr-14" : "pr-4"
           } text-sm text-text-primary outline-none transition placeholder:text-text-secondary/60 focus:ring-4 disabled:bg-surface-alt/60 ${
@@ -62,7 +98,7 @@ export default function AuthField({
           <button
             type="button"
             disabled={disabled}
-            onClick={() => setVisible(!visible)}
+            onClick={() => setVisible((current) => !current)}
             aria-label={`${visible ? "Ẩn" : "Hiện"} ${label.toLowerCase()}`}
             aria-pressed={visible}
             className="absolute right-1 top-1 grid size-11 place-items-center rounded-lg text-text-secondary transition hover:bg-surface-alt hover:text-primary"
