@@ -23,6 +23,7 @@ public class TaiKhoan {
     private String matKhauHash;
 
     @Enumerated(EnumType.STRING)
+    @org.hibernate.annotations.JdbcTypeCode(org.hibernate.type.SqlTypes.NAMED_ENUM)
     @Column(name = "vai_tro", nullable = false)
     private VaiTro vaiTro;
 
