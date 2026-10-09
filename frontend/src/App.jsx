@@ -10,6 +10,7 @@ import PriceListPage from './pages/PriceListPage/PriceListPage';
 
 import AuthPage from './auth/AuthPage';
 import SystemCheckPage from './pages/SystemCheckPage/SystemCheckPage';
+import HousekeepingDashboardPage from './pages/HousekeepingDashboardPage/HousekeepingDashboardPage';
 import './auth/auth.css';
 
 function App() {
@@ -19,6 +20,7 @@ function App() {
         <Routes>
           <Route path="/system-check" element={<SystemCheckPage />} />
           <Route path="/admin/price-lists" element={<PriceListPage />} />
+          <Route path="/admin/housekeeping" element={<HousekeepingDashboardPage />} />
           <Route path="/dang-nhap" element={<AuthPage key="login" mode="login" />} />
           <Route path="/dang-ky" element={<AuthPage key="register" mode="register" />} />
           <Route path="/quen-mat-khau" element={<AuthPage key="forgot" mode="forgot" />} />
