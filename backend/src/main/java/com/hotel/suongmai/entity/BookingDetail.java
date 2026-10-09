@@ -17,11 +17,11 @@ public class BookingDetail {
     @Column(name = "id", length = 36)
     private String id;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "phieu_dat_phong_id", nullable = false)
     private Booking booking;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "phong_id", nullable = false)
     private Room room;
 
@@ -43,11 +43,13 @@ public class BookingDetail {
     @Column(name = "trang_thai", length = 50, nullable = false)
     private String status;
 
-    @Column(name = "nhan_vien_nhan_id")
-    private String checkInStaffId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "nhan_vien_nhan_id")
+    private NhanVien checkInStaff;
 
-    @Column(name = "nhan_vien_tra_id")
-    private String checkOutStaffId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "nhan_vien_tra_id")
+    private NhanVien checkOutStaff;
 
     @Column(name = "hoa_don_id")
     private String invoiceId;

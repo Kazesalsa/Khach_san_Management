@@ -1,0 +1,33 @@
+package com.hotel.suongmai.entity;
+
+import jakarta.persistence.*;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+
+@Entity
+@Table(name = "tai_khoan")
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
+public class TaiKhoan {
+    @Id
+    @GeneratedValue(strategy = GenerationType.UUID)
+    @Column(name = "id", length = 36)
+    private String id;
+
+    @Column(name = "ten_dang_nhap", length = 50, unique = true, nullable = false)
+    private String tenDangNhap;
+
+    @Column(name = "mat_khau_hash", length = 255, nullable = false)
+    private String matKhauHash;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "vai_tro", nullable = false)
+    private VaiTro vaiTro;
+
+    @Column(name = "trang_thai", length = 20, nullable = false)
+    private String trangThai = "HOAT_DONG";
+}
