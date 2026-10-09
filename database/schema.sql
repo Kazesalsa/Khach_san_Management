@@ -25,3 +25,15 @@ CREATE TABLE IF NOT EXISTS nhan_vien (
     email VARCHAR(150),
     FOREIGN KEY (tai_khoan_id) REFERENCES tai_khoan(id) ON DELETE SET NULL
 );
+
+CREATE TABLE IF NOT EXISTS khach_hang (
+    id VARCHAR(36) PRIMARY KEY,
+    tai_khoan_id VARCHAR(36) UNIQUE,
+    ho_ten VARCHAR(100) NOT NULL,
+    so_dien_thoai VARCHAR(15) UNIQUE NOT NULL,
+    cccd_ho_chieu VARCHAR(20) UNIQUE,
+    email VARCHAR(150),
+    so_thich_phong VARCHAR(255),
+    ngay_tao TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (tai_khoan_id) REFERENCES tai_khoan(id) ON DELETE SET NULL
+);
