@@ -1,4 +1,4 @@
-version: '3.8'
+# version line removed as it's obsolete for Docker Compose v2
 services:
   postgres:
     image: postgres:15-alpine
@@ -8,11 +8,11 @@ services:
       POSTGRES_PASSWORD: 12345
       POSTGRES_DB: suongmai_db
     ports:
-      - "5432:5432"
+      - "5433:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
       # Mount thư mục database vào initdb để Docker tự động chạy script khi khởi tạo DB lần đầu
-      - ./database:/docker-entrypoint-initdb.d
+      - ../database:/docker-entrypoint-initdb.d
     restart: unless-stopped
 
   # Tuỳ chọn: Thêm pgAdmin để xem Database trên Web
@@ -23,7 +23,7 @@ services:
       PGADMIN_DEFAULT_EMAIL: admin@suongmai.com
       PGADMIN_DEFAULT_PASSWORD: admin
     ports:
-      - "5050:80"
+      - "5555:80"
     depends_on:
       - postgres
     restart: unless-stopped
