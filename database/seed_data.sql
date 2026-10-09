@@ -262,3 +262,74 @@ BEGIN
     END LOOP;
 END \$\$;
 
+
+-- Generate Invoices, Payments, and Daily Room Prices
+DO \$\$
+DECLARE
+    rec RECORD;
+    curr_date DATE;
+    inv_id VARCHAR(36);
+    tien_phong DECIMAL(12,2);
+    trang_thai_hd VARCHAR(50);
+BEGIN
+    FOR rec IN SELECT * FROM chi_tiet_dat_phong LOOP
+        inv_id := 'inv-' || SUBSTRING(rec.id FROM 13); -- id is 'detail-rand-X'
+        
+        -- Giả sử giá phòng là 500k/đêm
+        tien_phong := (rec.ngay_tra_du_kien - rec.ngay_nhan_du_kien) * 500000;
+        IF tien_phong < 0 THEN tien_phong := 0; END IF;
+        
+        IF rec.trang_thai = 'DA_TRA_PHONG' THEN
+            trang_thai_hd := 'DA_THANH_TOAN';
+        ELSIF rec.trang_thai = 'DA_HUY' THEN
+            trang_thai_hd := 'DA_HUY';
+        ELSE
+            trang_thai_hd := 'CHO_THANH_TOAN';
+        END IF;
+
+        -- Tạo Hóa Đơn
+        INSERT INTO hoa_don (id, so_hoa_don, ngay_lap, tien_phong, tien_dich_vu, tien_coc_da_khau_tru, tong_tien, so_tien_con_lai, trang_thai, nhan_vien_chot_id)
+        VALUES (
+            inv_id, 
+            'HD-' || LPAD(SUBSTRING(rec.id FROM 13), 6, '0'), 
+            CURRENT_TIMESTAMP, 
+            tien_phong, 
+            0, 
+            0, 
+            tien_phong, 
+            CASE WHEN trang_thai_hd = 'DA_THANH_TOAN' THEN 0 ELSE tien_phong END, 
+            trang_thai_hd::trang_thai_hoa_don_enum, 
+            'nv-admin-01'
+        );
+
+        -- Cập nhật hoa_don_id cho chi tiết đặt phòng
+        UPDATE chi_tiet_dat_phong SET hoa_don_id = inv_id WHERE id = rec.id;
+
+        -- Tạo Thanh toán (nếu đã thanh toán)
+        IF trang_thai_hd = 'DA_THANH_TOAN' THEN
+            INSERT INTO thanh_toan (id, loai_giao_dich, so_tien, phuong_thuc, trang_thai, thoi_gian, ma_tham_chieu, phieu_dat_phong_id, hoa_don_id, nhan_vien_thu_id)
+            VALUES (
+                'pay-' || SUBSTRING(rec.id FROM 13), 
+                'THANH_TOAN_HOA_DON', 
+                tien_phong, 
+                'CHUYEN_KHOAN', 
+                'THANH_CONG', 
+                CURRENT_TIMESTAMP, 
+                'REF-HD-' || LPAD(SUBSTRING(rec.id FROM 13), 6, '0'), 
+                rec.phieu_dat_phong_id, 
+                inv_id, 
+                'nv-letan-01'
+            );
+        END IF;
+
+        -- Tạo chi tiết giá phòng cho từng đêm
+        curr_date := rec.ngay_nhan_du_kien;
+        WHILE curr_date < rec.ngay_tra_du_kien LOOP
+            INSERT INTO chi_tiet_gia_phong (chi_tiet_dat_phong_id, ngay_luu_tru, don_gia, bang_gia_phong_id)
+            VALUES (rec.id, curr_date, 500000, NULL) ON CONFLICT DO NOTHING;
+            curr_date := curr_date + 1;
+        END LOOP;
+        
+    END LOOP;
+END \$\$;
+

@@ -1,9 +1,9 @@
+import com.hotel.suongmai.entity.HoaDon;
 package com.hotel.suongmai.repository;
 
-import com.hotel.suongmai.entity.Booking;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 @Repository
-public interface BookingRepository extends JpaRepository<Booking, String> {
+public interface HoaDonRepository extends JpaRepository<HoaDon, String> {
 }
