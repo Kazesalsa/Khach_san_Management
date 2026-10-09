@@ -236,3 +236,38 @@ CREATE TABLE IF NOT EXISTS chi_tiet_gia_phong (
 ALTER TABLE chi_tiet_dat_phong
     ADD CONSTRAINT fk_ctdp_hoadon 
     FOREIGN KEY (hoa_don_id) REFERENCES hoa_don(id) ON DELETE RESTRICT;
+
+CREATE TABLE IF NOT EXISTS danh_muc_dich_vu (
+    id VARCHAR(36) PRIMARY KEY,
+    ten_danh_muc VARCHAR(100) UNIQUE NOT NULL,
+    mo_ta TEXT
+);
+
+DO $$ BEGIN
+    CREATE TYPE trang_thai_dich_vu_enum AS ENUM ('DANG_CUNG_CAP', 'NGUNG_CUNG_CAP');
+EXCEPTION
+    WHEN duplicate_object THEN null;
+END $$;
+
+CREATE TABLE IF NOT EXISTS dich_vu (
+    id VARCHAR(36) PRIMARY KEY,
+    danh_muc_id VARCHAR(36) NOT NULL,
+    ten VARCHAR(150) UNIQUE NOT NULL,
+    don_vi_tinh VARCHAR(30) NOT NULL,
+    don_gia_hien_tai DECIMAL(12,2) NOT NULL CHECK (don_gia_hien_tai >= 0),
+    trang_thai trang_thai_dich_vu_enum DEFAULT 'DANG_CUNG_CAP' NOT NULL,
+    FOREIGN KEY (danh_muc_id) REFERENCES danh_muc_dich_vu(id) ON DELETE RESTRICT
+);
+
+CREATE TABLE IF NOT EXISTS su_dung_dich_vu (
+    id VARCHAR(36) PRIMARY KEY,
+    chi_tiet_dat_phong_id VARCHAR(36) NOT NULL,
+    dich_vu_id VARCHAR(36) NOT NULL,
+    nhan_vien_ghi_nhan_id VARCHAR(36) NOT NULL,
+    so_luong DECIMAL(10,2) NOT NULL CHECK (so_luong > 0),
+    don_gia_ap_dung DECIMAL(12,2) NOT NULL CHECK (don_gia_ap_dung >= 0),
+    thoi_gian_su_dung TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (chi_tiet_dat_phong_id) REFERENCES chi_tiet_dat_phong(id) ON DELETE CASCADE,
+    FOREIGN KEY (dich_vu_id) REFERENCES dich_vu(id) ON DELETE RESTRICT,
+    FOREIGN KEY (nhan_vien_ghi_nhan_id) REFERENCES nhan_vien(ma_nhan_vien) ON DELETE RESTRICT
+);

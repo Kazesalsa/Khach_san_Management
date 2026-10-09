@@ -333,3 +333,52 @@ BEGIN
     END LOOP;
 END \$\$;
 
+-- Insert Service Categories
+INSERT INTO danh_muc_dich_vu (id, ten_danh_muc, mo_ta) VALUES
+('cat-svc-1', 'Đồ ăn & Đồ uống (F&B)', 'Phục vụ ăn uống tại phòng'),
+('cat-svc-2', 'Giặt ủi', 'Dịch vụ giặt, sấy, là ủi quần áo'),
+('cat-svc-3', 'Spa & Massage', 'Dịch vụ chăm sóc sức khỏe và làm đẹp');
+
+-- Insert Services
+INSERT INTO dich_vu (id, danh_muc_id, ten, don_vi_tinh, don_gia_hien_tai, trang_thai) VALUES
+-- F&B
+('svc-1', 'cat-svc-1', 'Nước suối Aquafina 500ml', 'Chai', 15000, 'DANG_CUNG_CAP'),
+('svc-2', 'cat-svc-1', 'Bia Heineken', 'Lon', 35000, 'DANG_CUNG_CAP'),
+('svc-3', 'cat-svc-1', 'Mì xào hải sản', 'Phần', 85000, 'DANG_CUNG_CAP'),
+('svc-4', 'cat-svc-1', 'Bữa sáng Buffet', 'Người', 150000, 'DANG_CUNG_CAP'),
+-- Giặt ủi
+('svc-5', 'cat-svc-2', 'Giặt sấy cơ bản', 'Kg', 40000, 'DANG_CUNG_CAP'),
+('svc-6', 'cat-svc-2', 'Giặt hấp áo vest', 'Cái', 120000, 'DANG_CUNG_CAP'),
+-- Spa
+('svc-7', 'cat-svc-3', 'Massage toàn thân 60p', 'Lần', 350000, 'DANG_CUNG_CAP'),
+('svc-8', 'cat-svc-3', 'Xông hơi khô (Sauna)', 'Giờ', 150000, 'DANG_CUNG_CAP');
+
+-- Generate Random Service Usages
+DO \$\$
+DECLARE
+    rec RECORD;
+    rand_svc INT;
+    svc_price DECIMAL(12,2);
+    svc_id VARCHAR(36);
+    usage_id INT := 1;
+BEGIN
+    FOR rec IN SELECT * FROM chi_tiet_dat_phong WHERE trang_thai IN ('DA_NHAN', 'DA_TRA_PHONG') LOOP
+        IF random() < 0.3 THEN
+            rand_svc := floor(random() * 8 + 1)::INT;
+            svc_id := 'svc-' || rand_svc;
+            SELECT don_gia_hien_tai INTO svc_price FROM dich_vu WHERE id = svc_id;
+            
+            INSERT INTO su_dung_dich_vu (id, chi_tiet_dat_phong_id, dich_vu_id, nhan_vien_ghi_nhan_id, so_luong, don_gia_ap_dung, thoi_gian_su_dung)
+            VALUES (
+                'usg-' || usage_id,
+                rec.id, 
+                svc_id, 
+                'nv-letan-01',
+                floor(random() * 3 + 1)::INT,
+                svc_price,
+                rec.ngay_nhan_du_kien + interval '12 hours'
+            );
+            usage_id := usage_id + 1;
+        END IF;
+    END LOOP;
+END \$\$;
