@@ -12,6 +12,10 @@ public class KhachHang {
     @GeneratedValue(strategy = GenerationType.UUID)
     private String id;
 
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "tai_khoan_id", unique = true)
+    private TaiKhoan taiKhoan;
+
     @Column(name = "ho_ten", nullable = false, length = 100)
     private String fullName;
 
