@@ -1,5 +1,4 @@
 package com.hotel.suongmai.repository;
-
 import com.hotel.suongmai.entity.ChiTietGiaPhongId;
 import com.hotel.suongmai.entity.ChiTietGiaPhong;
 
