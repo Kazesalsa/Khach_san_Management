@@ -15,8 +15,9 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import com.hotel.suongmai.dto.AuthErrorResponse;
+import com.hotel.suongmai.controller.AuthController;
 
-@RestControllerAdvice
+@RestControllerAdvice(assignableTypes = AuthController.class)
 public class AuthExceptionHandler {
 
     @ExceptionHandler({BadCredentialsException.class, UsernameNotFoundException.class})
