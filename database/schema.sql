@@ -168,11 +168,11 @@ CREATE TABLE IF NOT EXISTS quyen_loi_ap_dung (
     FOREIGN KEY (phieu_dat_phong_id) REFERENCES phieu_dat_phong(id) ON DELETE RESTRICT
 );
 
-DO \$\$ BEGIN
+DO $$ BEGIN
     CREATE TYPE trang_thai_hoa_don_enum AS ENUM ('CHUA_CHOT', 'CHO_THANH_TOAN', 'DA_THANH_TOAN', 'DA_CHOT', 'DA_HUY');
 EXCEPTION
     WHEN duplicate_object THEN null;
-END \$\$;
+END $$;
 
 CREATE TABLE IF NOT EXISTS hoa_don (
     id VARCHAR(36) PRIMARY KEY,
@@ -189,23 +189,23 @@ CREATE TABLE IF NOT EXISTS hoa_don (
     FOREIGN KEY (nhan_vien_chot_id) REFERENCES nhan_vien(ma_nhan_vien) ON DELETE SET NULL
 );
 
-DO \$\$ BEGIN
+DO $$ BEGIN
     CREATE TYPE loai_giao_dich_enum AS ENUM ('TIEN_COC', 'THANH_TOAN_HOA_DON', 'HOAN_TIEN');
 EXCEPTION
     WHEN duplicate_object THEN null;
-END \$\$;
+END $$;
 
-DO \$\$ BEGIN
+DO $$ BEGIN
     CREATE TYPE phuong_thuc_tt_enum AS ENUM ('TIEN_MAT', 'CHUYEN_KHOAN');
 EXCEPTION
     WHEN duplicate_object THEN null;
-END \$\$;
+END $$;
 
-DO \$\$ BEGIN
+DO $$ BEGIN
     CREATE TYPE trang_thai_tt_enum AS ENUM ('CHO_XAC_NHAN', 'THANH_CONG', 'THAT_BAI');
 EXCEPTION
     WHEN duplicate_object THEN null;
-END \$\$;
+END $$;
 
 CREATE TABLE IF NOT EXISTS thanh_toan (
     id VARCHAR(36) PRIMARY KEY,
