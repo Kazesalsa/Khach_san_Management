@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { motion, useReducedMotion } from "framer-motion";
 import {
   ArrowRight,
@@ -13,6 +13,10 @@ import {
 import AuthHeader from "./AuthHeader";
 import AuthField from "./AuthField";
 import { validate } from "./validation";
+import {
+  login,
+  getCurrentProfile,
+} from "../services/authService";
 
 const copy = {
   login: {
@@ -48,9 +52,11 @@ const copy = {
 };
 
 export default function AuthPage({ mode }) {
+  const navigate = useNavigate();
   const c = copy[mode];
   const reduce = useReducedMotion();
   const [values, setValues] = useState({
+    username: "",
     email: "",
     password: "",
     confirm: "",
@@ -59,7 +65,7 @@ export default function AuthPage({ mode }) {
   const [remember, setRemember] = useState(false);
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState("");
-  const timer = useRef(null);
+  const [noticeType, setNoticeType] = useState("info");
   const form = useRef(null);
   const status = useRef(null);
   const submitting = useRef(false);
@@ -67,11 +73,11 @@ export default function AuthPage({ mode }) {
 
   useEffect(() => {
     document.title = `${copy[mode].heading} | Sương Mai Hotel`;
-    return () => clearTimeout(timer.current);
   }, [mode]);
 
-  const notify = (message) => {
+  const notify = (message, type = "info") => {
     setNotice(message);
+    setNoticeType(type);
     requestAnimationFrame(() => status.current?.focus());
   };
 
@@ -80,14 +86,20 @@ export default function AuthPage({ mode }) {
     setNotice("");
   };
 
-  const submit = (e) => {
+  const submit = async (e) => {
     e.preventDefault();
+
     if (submitting.current) return;
 
-    setTouched({ email: true, password: true, confirm: true });
-    setNotice("");
+    setTouched({
+      username: true,
+      email: true,
+      password: true,
+      confirm: true,
+    });
 
     const first = Object.keys(errors)[0];
+
     if (first) {
       form.current.elements.namedItem(first)?.focus();
       return;
@@ -95,22 +107,83 @@ export default function AuthPage({ mode }) {
 
     submitting.current = true;
     setBusy(true);
+    setNotice("");
 
-    timer.current = setTimeout(() => {
+    try {
+      // Issue #40 hiện tại chỉ kết nối API thật cho màn Login.
+      if (mode === "login") {
+        const loginResult = await login(
+          values.username.trim(),
+          values.password,
+        );
+
+        const token = loginResult.token;
+
+        if (!token) {
+          throw new Error("Backend không trả về JWT token.");
+        }
+
+        // Ghi nhớ đăng nhập:
+        // checked   -> tồn tại cả khi đóng browser
+        // unchecked -> chỉ tồn tại trong tab/session hiện tại
+        const storage = remember ? localStorage : sessionStorage;
+        const otherStorage = remember ? sessionStorage : localStorage;
+
+        storage.setItem("authToken", token);
+        otherStorage.removeItem("authToken");
+
+        const profile = await getCurrentProfile(token);
+
+        storage.setItem("authUser", JSON.stringify(profile));
+        otherStorage.removeItem("authUser");
+
+        navigate("/", { replace: true }); 
+
+        setValues((v) => ({
+          ...v,
+          password: "",
+        }));
+
+        setTouched({});
+        return;
+      }
+
+      // Register và Forgot hiện chưa có API tương ứng,
+      // nên tạm giữ hành vi demo cũ.
+      if (mode === "forgot") {
+        notify(
+          "Bản demo: email hợp lệ. Chưa gửi email khôi phục mật khẩu.",
+        );
+      } else if (mode === "register") {
+        notify(
+          "Bản demo: thông tin đăng ký hợp lệ. Chưa tạo tài khoản thật.",
+        );
+      }
+    } catch (error) {
+      // Nếu login thất bại thì không giữ token/user cũ.
+      localStorage.removeItem("authToken");
+      localStorage.removeItem("authUser");
+      sessionStorage.removeItem("authToken");
+      sessionStorage.removeItem("authUser");
+
+      const status = error.response?.status;
+
+      if (status === 401) {
+        notify("Tên đăng nhập hoặc mật khẩu không đúng.", "error");
+      } else if (status === 403) {
+        notify("Tài khoản đã bị khóa hoặc không có quyền đăng nhập.", "error");
+      } else if (!error.response) {
+        notify(
+          "Không thể kết nối đến máy chủ. Hãy kiểm tra backend đang chạy.",
+          "error"
+        );
+      } else {
+        notify("Đăng nhập thất bại. Vui lòng thử lại.", "error");
+      }
+    } finally {
       setBusy(false);
       submitting.current = false;
-      notify(
-        mode === "forgot"
-          ? "Bản demo: email hợp lệ. Chưa gửi email khôi phục mật khẩu."
-          : mode === "register"
-            ? "Bản demo: thông tin đăng ký hợp lệ. Chưa tạo tài khoản thật."
-            : `Bản demo: thông tin hợp lệ. Chưa xác thực tài khoản${
-                remember ? " hoặc lưu phiên ghi nhớ đăng nhập" : ""
-              }.`,
-      );
-      setValues((v) => ({ ...v, password: "", confirm: "" }));
-      setTouched({});
-    }, 650);
+    }
   };
 
   const field = (name, label, autoComplete, hint) => (
@@ -228,7 +301,9 @@ export default function AuthPage({ mode }) {
 
                 <div className="my-6 flex items-center gap-4 text-[11px] text-text-secondary/70">
                   <span className="h-px flex-1 bg-border-custom" />
-                  hoặc tiếp tục với email
+                  {mode === "login"
+                    ? "hoặc tiếp tục với tên đăng nhập"
+                    : "hoặc tiếp tục với email"}
                   <span className="h-px flex-1 bg-border-custom" />
                 </div>
               </>
@@ -241,7 +316,9 @@ export default function AuthPage({ mode }) {
               aria-busy={busy}
               className="space-y-5"
             >
-              {field("email", "Email", "email")}
+              {mode === "login"
+              ? field("username", "Tên đăng nhập", "username")
+              : field("email", "Email", "email")}
 
               {mode !== "forgot" &&
                 field(
@@ -306,7 +383,9 @@ export default function AuthPage({ mode }) {
               aria-live="polite"
               className={
                 notice
-                  ? "mt-5 rounded-xl border border-success-custom/30 bg-success-custom/10 p-4 text-xs leading-6 text-success-custom"
+                  ? noticeType === "error"
+                    ? "mt-5 rounded-xl border border-danger-custom/30 bg-danger-custom/10 p-4 text-xs leading-6 text-danger-custom"
+                    : "mt-5 rounded-xl border border-success-custom/30 bg-success-custom/10 p-4 text-xs leading-6 text-success-custom"
                   : "sr-only"
               }
             >
@@ -338,7 +417,9 @@ export default function AuthPage({ mode }) {
             )}
 
             <p className="mt-3 text-center text-[10px] leading-5 text-text-secondary/70">
-              Bản xem thử giao diện · Chưa kết nối dịch vụ tài khoản
+              {mode === "login"
+                ? "Đăng nhập đã kết nối hệ thống tài khoản"
+                : "Bản xem thử giao diện · Chưa kết nối dịch vụ tài khoản"}
             </p>
           </motion.section>
         </div>
