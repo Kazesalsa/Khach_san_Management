@@ -27,6 +27,12 @@ public class RoomExceptionHandler {
                 .body(new RoomErrorResponse("Phòng này đã được đánh dấu dọn xong"));
     }
 
+    @ExceptionHandler(org.springframework.security.access.AccessDeniedException.class)
+    public ResponseEntity<RoomErrorResponse> handleAccessDenied(org.springframework.security.access.AccessDeniedException exception) {
+        return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                .body(new RoomErrorResponse("Bạn không có quyền thực hiện thao tác này"));
+    }
+
     @ExceptionHandler(DataAccessException.class)
     public ResponseEntity<RoomErrorResponse> handleDatabaseError(DataAccessException exception) {
         return internalServerError();
