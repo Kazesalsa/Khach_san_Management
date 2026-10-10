@@ -3,6 +3,7 @@ package com.hotel.suongmai.controller;
 import com.hotel.suongmai.dto.CreatePriceListRequest;
 import com.hotel.suongmai.dto.PriceListResponse;
 import com.hotel.suongmai.dto.PriceListResult;
+import com.hotel.suongmai.dto.RoomCategoryOptionResponse;
 import com.hotel.suongmai.dto.UpdatePriceListRequest;
 import com.hotel.suongmai.service.PriceListService;
 import jakarta.validation.Valid;
@@ -10,6 +11,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -19,6 +21,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.time.LocalTime;
 import java.time.temporal.ChronoUnit;
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/price-lists")
@@ -28,32 +31,52 @@ public class PriceListController {
 
     private final PriceListService priceListService;
 
+    /**
+     * Lấy danh sách loại phòng để đổ vào Dropdown.
+     */
+    @GetMapping("/room-categories")
+    public ResponseEntity<List<RoomCategoryOptionResponse>> getRoomCategories() {
+        return ResponseEntity.ok(
+                priceListService.getRoomCategoryOptions()
+        );
+    }
+
     @PostMapping
     public ResponseEntity<PriceListResponse> create(
             @Valid @RequestBody CreatePriceListRequest request) {
+
         PriceListResult result = priceListService.createPriceList(
                 request.roomCategoryId(),
                 request.startDate().atStartOfDay(),
-                request.endDate().atTime(LocalTime.MAX).truncatedTo(ChronoUnit.MICROS),
+                request.endDate()
+                        .atTime(LocalTime.MAX)
+                        .truncatedTo(ChronoUnit.MICROS),
                 request.price(),
                 request.status()
         );
 
-        return ResponseEntity.status(HttpStatus.CREATED).body(PriceListResponse.forCreate(result));
+        return ResponseEntity
+                .status(HttpStatus.CREATED)
+                .body(PriceListResponse.forCreate(result));
     }
 
     @PutMapping("/{id}")
     public ResponseEntity<PriceListResponse> update(
             @PathVariable String id,
             @Valid @RequestBody UpdatePriceListRequest request) {
+
         PriceListResult result = priceListService.updatePriceList(
                 id,
                 request.startDate().atStartOfDay(),
-                request.endDate().atTime(LocalTime.MAX).truncatedTo(ChronoUnit.MICROS),
+                request.endDate()
+                        .atTime(LocalTime.MAX)
+                        .truncatedTo(ChronoUnit.MICROS),
                 request.price(),
                 request.status()
         );
 
-        return ResponseEntity.ok(PriceListResponse.forUpdate(result));
+        return ResponseEntity.ok(
+                PriceListResponse.forUpdate(result)
+        );
     }
 }

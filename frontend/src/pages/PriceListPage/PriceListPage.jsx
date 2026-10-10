@@ -1,15 +1,16 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { Link, Navigate } from 'react-router-dom';
+
 import Button from '../../components/ui/Button';
 import { Input, Select } from '../../components/ui/Input';
 import DatePicker from '../../components/ui/DatePicker';
 import Modal from '../../components/ui/Modal';
 
-const ROOM_CATEGORIES = [
-  { value: '', label: '-- Chọn loại phòng --' },
-  { value: 'standard', label: 'Standard' },
-  { value: 'deluxe', label: 'Deluxe' },
-  { value: 'suite', label: 'Suite' },
-];
+import {
+  getRoomCategories,
+  createPriceList,
+  updatePriceList,
+} from '../../services/priceListService';
 
 const INITIAL_PRICE_LISTS = [
   {
@@ -50,16 +51,109 @@ const formatDate = (date) => {
   return date.split('-').reverse().join('/');
 };
 
+const getStoredUser = () => {
+  try {
+    const localUser = localStorage.getItem('authUser');
+    const sessionUser = sessionStorage.getItem('authUser');
+
+    return JSON.parse(localUser || sessionUser || 'null');
+  } catch {
+    return null;
+  }
+};
+
 function PriceListPage() {
+  const user = getStoredUser();
+
   const [priceLists, setPriceLists] = useState(INITIAL_PRICE_LISTS);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [form, setForm] = useState(EMPTY_FORM);
   const [formError, setFormError] = useState('');
 
+  const [roomCategories, setRoomCategories] = useState([
+    {
+      value: '',
+      label: '-- Chọn loại phòng --',
+    },
+  ]);
+
+  useEffect(() => {
+    document.title = 'Quản lý bảng giá phòng | Sương Mai Hotel';
+  }, []);
+
+  useEffect(() => {
+    if (user?.role !== 'CHU_KHACH_SAN') {
+      return;
+    }
+
+    const loadRoomCategories = async () => {
+      try {
+        const data = await getRoomCategories();
+
+        const options = data.map((category) => ({
+          value: category.id,
+          label: category.name,
+        }));
+
+        setRoomCategories([
+          {
+            value: '',
+            label: '-- Chọn loại phòng --',
+          },
+          ...options,
+        ]);
+      } catch (err) {
+        console.error(
+          'Không thể tải danh sách loại phòng:',
+          err
+        );
+      }
+    };
+
+    loadRoomCategories();
+  }, [user?.role]);
+
+  /*
+   * FRONTEND ROUTE GUARD
+   *
+   * Backend vẫn là lớp bảo mật chính thông qua:
+   * hasRole('CHU_KHACH_SAN')
+   *
+   * Phần này giúp người dùng không nhìn thấy giao diện
+   * không thuộc quyền của mình khi nhập URL trực tiếp.
+   */
+  if (!user) {
+    return (
+      <Navigate
+        to="/dang-nhap"
+        replace
+      />
+    );
+  }
+
+  if (user.role !== 'CHU_KHACH_SAN') {
+    if (user.role === 'NHAN_VIEN_BUONG') {
+      return (
+        <Navigate
+          to="/admin/housekeeping"
+          replace
+        />
+      );
+    }
+
+    return (
+      <Navigate
+        to="/"
+        replace
+      />
+    );
+  }
+
   const getCategoryName = (categoryId) =>
-    ROOM_CATEGORIES.find((category) => category.value === categoryId)?.label ||
-    categoryId;
+    roomCategories.find(
+      (category) => category.value === categoryId
+    )?.label || categoryId;
 
   const handleChange = (field) => (event) => {
     setForm((prev) => ({
@@ -77,12 +171,14 @@ function PriceListPage() {
 
   const openEditForm = (item) => {
     setEditingId(item.id);
+
     setForm({
       roomCategoryId: item.roomCategoryId,
       startDate: item.startDate,
       endDate: item.endDate,
       price: String(item.price),
     });
+
     setFormError('');
     setIsModalOpen(true);
   };
@@ -94,62 +190,102 @@ function PriceListPage() {
     setFormError('');
   };
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
 
     setFormError('');
 
     if (form.endDate < form.startDate) {
-      setFormError('Ngày kết thúc phải lớn hơn hoặc bằng ngày bắt đầu.');
+      setFormError(
+        'Ngày kết thúc phải lớn hơn hoặc bằng ngày bắt đầu.'
+      );
       return;
     }
 
-    const newData = {
-      roomCategoryId: form.roomCategoryId,
-      startDate: form.startDate,
-      endDate: form.endDate,
-      price: Number(form.price),
-    };
+    try {
+      let savedPriceList;
 
-    if (editingId) {
-      setPriceLists((prev) =>
-        prev.map((item) =>
-          item.id === editingId
-            ? {
-                ...item,
-                ...newData,
-              }
-            : item
-        )
-      );
-    } else {
-      setPriceLists((prev) => [
-        ...prev,
-        {
-          id: Date.now(),
-          ...newData,
-        },
-      ]);
+      if (editingId) {
+        savedPriceList = await updatePriceList(
+          editingId,
+          {
+            startDate: form.startDate,
+            endDate: form.endDate,
+            price: Number(form.price),
+          }
+        );
+
+        setPriceLists((prev) =>
+          prev.map((item) =>
+            item.id === editingId
+              ? savedPriceList
+              : item
+          )
+        );
+      } else {
+        savedPriceList = await createPriceList({
+          roomCategoryId: form.roomCategoryId,
+          startDate: form.startDate,
+          endDate: form.endDate,
+          price: Number(form.price),
+        });
+
+        setPriceLists((prev) => [
+          ...prev,
+          savedPriceList,
+        ]);
+      }
+
+      handleCloseModal();
+    } catch (err) {
+      if (err.response) {
+        setFormError(
+          err.response.data?.message ||
+            `Không thể lưu bảng giá (${err.response.status}).`
+        );
+      } else if (err.request) {
+        setFormError(
+          'Không thể kết nối tới máy chủ. Vui lòng kiểm tra backend đang chạy.'
+        );
+      } else {
+        setFormError(
+          'Đã xảy ra lỗi. Vui lòng thử lại.'
+        );
+      }
     }
-
-    handleCloseModal();
   };
 
   return (
     <div className="min-h-screen bg-background">
       <header className="bg-primary text-text-on-dark border-b border-white/10">
         <div className="max-w-6xl mx-auto px-6 py-6">
-          <p className="text-accent text-xs font-bold uppercase tracking-[0.2em]">
-            Sương Mai Hotel
-          </p>
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <p className="text-accent text-xs font-bold uppercase tracking-[0.2em]">
+                Sương Mai Hotel
+              </p>
 
-          <h1 className="font-headline text-3xl font-bold mt-1">
-            Quản lý bảng giá phòng
-          </h1>
+              <h1 className="font-headline text-3xl font-bold mt-1">
+                Quản lý bảng giá phòng
+              </h1>
 
-          <p className="text-text-on-dark/70 text-sm mt-2">
-            Thiết lập giá phòng theo loại phòng và khoảng thời gian.
-          </p>
+              <p className="text-text-on-dark/70 text-sm mt-2">
+                Thiết lập giá phòng theo loại phòng và
+                khoảng thời gian.
+              </p>
+            </div>
+
+            <Link
+              to="/"
+              className="inline-flex items-center gap-2 rounded-xl border border-white/20 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-white/10"
+            >
+              <span className="material-symbols-outlined text-[18px]">
+                arrow_back
+              </span>
+
+              Về trang chủ
+            </Link>
+          </div>
         </div>
       </header>
 
@@ -208,7 +344,9 @@ function PriceListPage() {
                   >
                     <td className="px-6 py-4">
                       <span className="font-semibold text-primary">
-                        {getCategoryName(item.roomCategoryId)}
+                        {getCategoryName(
+                          item.roomCategoryId
+                        )}
                       </span>
                     </td>
 
@@ -231,7 +369,9 @@ function PriceListPage() {
                         variant="outline"
                         size="sm"
                         iconLeft="edit"
-                        onClick={() => openEditForm(item)}
+                        onClick={() =>
+                          openEditForm(item)
+                        }
                       >
                         Chỉnh sửa
                       </Button>
@@ -247,7 +387,11 @@ function PriceListPage() {
       <Modal
         isOpen={isModalOpen}
         onClose={handleCloseModal}
-        title={editingId ? 'Chỉnh sửa bảng giá' : 'Tạo bảng giá mới'}
+        title={
+          editingId
+            ? 'Chỉnh sửa bảng giá'
+            : 'Tạo bảng giá mới'
+        }
         subtitle="Thiết lập loại phòng, khoảng ngày áp dụng và giá tiền."
       >
         <form
@@ -258,9 +402,12 @@ function PriceListPage() {
             id="roomCategory"
             label="Loại phòng"
             value={form.roomCategoryId}
-            onChange={handleChange('roomCategoryId')}
-            options={ROOM_CATEGORIES}
+            onChange={handleChange(
+              'roomCategoryId'
+            )}
+            options={roomCategories}
             required
+            disabled={Boolean(editingId)}
             icon="hotel"
           />
 
@@ -269,7 +416,9 @@ function PriceListPage() {
               id="startDate"
               label="Ngày bắt đầu"
               value={form.startDate}
-              onChange={handleChange('startDate')}
+              onChange={handleChange(
+                'startDate'
+              )}
               required
             />
 
@@ -277,7 +426,9 @@ function PriceListPage() {
               id="endDate"
               label="Ngày kết thúc"
               value={form.endDate}
-              onChange={handleChange('endDate')}
+              onChange={handleChange(
+                'endDate'
+              )}
               required
             />
           </div>
@@ -317,7 +468,9 @@ function PriceListPage() {
               type="submit"
               iconLeft="save"
             >
-              {editingId ? 'Lưu thay đổi' : 'Tạo bảng giá'}
+              {editingId
+                ? 'Lưu thay đổi'
+                : 'Tạo bảng giá'}
             </Button>
           </div>
         </form>

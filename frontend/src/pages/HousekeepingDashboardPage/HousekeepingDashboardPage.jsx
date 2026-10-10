@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Button from '../../components/ui/Button';
 import Badge from '../../components/ui/Badge';
 
@@ -16,6 +16,10 @@ const INITIAL_ROOMS = [
 
 function HousekeepingDashboardPage() {
   const [rooms, setRooms] = useState(INITIAL_ROOMS);
+
+  useEffect(() => {
+    document.title = 'Dashboard Nhân viên Buồng phòng | Sương Mai Hotel';
+  }, []);
 
   const dirtyRooms = rooms.filter((r) => r.status === 'dirty');
   const cleanRooms = rooms.filter((r) => r.status === 'clean');
