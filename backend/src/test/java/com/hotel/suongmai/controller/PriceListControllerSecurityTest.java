@@ -110,7 +110,7 @@ class PriceListControllerSecurityTest {
         when(priceListService.createPriceList(
                 eq("cat-1"),
                 eq(LocalDateTime.of(2026, 11, 1, 0, 0)),
-                eq(LocalDateTime.of(2026, 11, 10, 23, 59, 59, 999_999_999)),
+                eq(LocalDateTime.of(2026, 11, 10, 23, 59, 59, 999_999_000)),
                 eq(new BigDecimal("500000")),
                 eq("ACTIVE")))
                 .thenReturn(result(false, "Thiết lập bảng giá thành công."));
@@ -263,7 +263,7 @@ class PriceListControllerSecurityTest {
         verify(priceListService).updatePriceList(
                 "price-1",
                 LocalDateTime.of(2026, 12, 1, 0, 0),
-                LocalDateTime.of(2026, 12, 15, 23, 59, 59, 999_999_999),
+                LocalDateTime.of(2026, 12, 15, 23, 59, 59, 999_999_000),
                 new BigDecimal("650000"),
                 "ACTIVE");
     }

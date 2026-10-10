@@ -18,6 +18,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.time.LocalTime;
+import java.time.temporal.ChronoUnit;
 
 @RestController
 @RequestMapping("/api/price-lists")
@@ -33,7 +34,7 @@ public class PriceListController {
         PriceListResult result = priceListService.createPriceList(
                 request.roomCategoryId(),
                 request.startDate().atStartOfDay(),
-                request.endDate().atTime(LocalTime.MAX),
+                request.endDate().atTime(LocalTime.MAX).truncatedTo(ChronoUnit.MICROS),
                 request.price(),
                 request.status()
         );
@@ -48,7 +49,7 @@ public class PriceListController {
         PriceListResult result = priceListService.updatePriceList(
                 id,
                 request.startDate().atStartOfDay(),
-                request.endDate().atTime(LocalTime.MAX),
+                request.endDate().atTime(LocalTime.MAX).truncatedTo(ChronoUnit.MICROS),
                 request.price(),
                 request.status()
         );
