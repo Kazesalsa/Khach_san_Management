@@ -15,10 +15,9 @@ public class TaiKhoanDetailsService implements UserDetailsService {
     private final TaiKhoanRepository taiKhoanRepository;
 
     @Override
-    public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-        TaiKhoan account = taiKhoanRepository.findByTenDangNhap(username)
-                .orElseThrow(() -> new UsernameNotFoundException(
-                        "Không tìm thấy tài khoản: " + username));
-        return new TaiKhoanDetails(account);
+    public UserDetails loadUserByUsername(String tenDangNhap) throws UsernameNotFoundException {
+        TaiKhoan taiKhoan = taiKhoanRepository.findByTenDangNhap(tenDangNhap)
+                .orElseThrow(() -> new UsernameNotFoundException("Không tìm thấy tài khoản: " + tenDangNhap));
+        return new TaiKhoanDetails(taiKhoan);
     }
 }

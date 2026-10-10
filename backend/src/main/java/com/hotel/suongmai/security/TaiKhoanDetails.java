@@ -1,6 +1,8 @@
 package com.hotel.suongmai.security;
 
 import com.hotel.suongmai.entity.TaiKhoan;
+import com.hotel.suongmai.entity.TrangThaiTaiKhoan;
+import lombok.Getter;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -8,6 +10,7 @@ import org.springframework.security.core.userdetails.UserDetails;
 import java.util.Collection;
 import java.util.Collections;
 
+@Getter
 public class TaiKhoanDetails implements UserDetails {
 
     private final TaiKhoan taiKhoan;
@@ -34,22 +37,18 @@ public class TaiKhoanDetails implements UserDetails {
     }
 
     @Override
-    public boolean isAccountNonExpired() {
-        return true;
-    }
+    public boolean isAccountNonExpired() { return true; }
 
     @Override
     public boolean isAccountNonLocked() {
-        return !"BI_KHOA".equalsIgnoreCase(taiKhoan.getTrangThai());
+        return this.taiKhoan.getTrangThai() != TrangThaiTaiKhoan.BI_KHOA;
     }
 
     @Override
-    public boolean isCredentialsNonExpired() {
-        return true;
-    }
+    public boolean isCredentialsNonExpired() { return true; }
 
     @Override
     public boolean isEnabled() {
-        return "HOAT_DONG".equalsIgnoreCase(taiKhoan.getTrangThai());
+        return this.taiKhoan.getTrangThai() == TrangThaiTaiKhoan.HOAT_DONG;
     }
 }
