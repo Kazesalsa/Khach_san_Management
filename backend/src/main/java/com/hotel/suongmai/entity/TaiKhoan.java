@@ -28,6 +28,7 @@ public class TaiKhoan {
     @Column(name = "vai_tro", nullable = false)
     private VaiTro vaiTro;
 
+    @Enumerated(EnumType.STRING)
     @Column(name = "trang_thai", length = 20, nullable = false)
-    private String trangThai = "HOAT_DONG";
+    private TrangThaiTaiKhoan trangThai = TrangThaiTaiKhoan.HOAT_DONG;
 }
