@@ -9,7 +9,7 @@ on:
 jobs:
   backend-test:
     runs-on: ubuntu-latest
-    
+
     # Khoi tao Database ao cho CI de chay Test Spring Boot
     services:
       postgres:
@@ -28,34 +28,38 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
-    
+
     - name: Set up JDK 21
       uses: actions/setup-java@v4
       with:
         java-version: '21'
         distribution: 'temurin'
         cache: maven
-        
+
     - name: Run Maven Tests
       working-directory: ./backend
+      env:
+        SPRING_DATASOURCE_URL: jdbc:postgresql://localhost:5432/khach_san_suong_mai
+        SPRING_DATASOURCE_USERNAME: postgres
+        SPRING_DATASOURCE_PASSWORD: rootpassword
       run: mvn clean test
 
   frontend-test:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
-    
+
     - name: Set up Node.js
       uses: actions/setup-node@v4
       with:
         node-version: '20'
         cache: 'npm'
         cache-dependency-path: './frontend/package-lock.json'
-        
+
     - name: Install dependencies
       working-directory: ./frontend
       run: npm install
-      
+
     - name: Run Build Test
       working-directory: ./frontend
       run: npm run build
