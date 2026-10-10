@@ -10,13 +10,16 @@ import java.time.LocalDate;
 
 @Repository
 public interface BookingRepository extends JpaRepository<Booking, String> {
-    
-    @Query("SELECT COUNT(bd) > 0 FROM BookingDetail bd " +
-           "WHERE bd.room.roomCategory.id = :categoryId " +
-           "AND bd.expectedCheckInDate <= :endDate " +
-           "AND bd.expectedCheckOutDate >= :startDate " +
-           "AND bd.booking.status IN ('CHO_XAC_NHAN', 'DA_DAT', 'DA_NHAN')")
-    boolean existsActiveBookingsInDateRange(@Param("categoryId") String categoryId,
-                                            @Param("startDate") LocalDate startDate,
-                                            @Param("endDate") LocalDate endDate);
+    @Query("""
+            SELECT COUNT(detail) > 0 FROM BookingDetail detail
+            WHERE detail.room.roomCategory.id = :categoryId
+              AND detail.booking.status <> com.hotel.suongmai.entity.BookingStatus.DA_HUY
+              AND detail.expectedCheckInDate <= :toDate
+              AND detail.expectedCheckOutDate >= :fromDate
+        """)
+    boolean existsActiveBookingsInDateRange(
+            @Param("categoryId") String categoryId,
+            @Param("fromDate") LocalDate fromDate,
+            @Param("toDate") LocalDate toDate
+    );
 }
