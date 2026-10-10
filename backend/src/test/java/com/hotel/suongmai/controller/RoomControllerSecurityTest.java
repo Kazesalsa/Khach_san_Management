@@ -1,10 +1,7 @@
 package com.hotel.suongmai.controller;
 
 import com.hotel.suongmai.config.SecurityConfig;
-import com.hotel.suongmai.entity.CleaningStatus;
-import com.hotel.suongmai.entity.Room;
-import com.hotel.suongmai.entity.TaiKhoan;
-import com.hotel.suongmai.entity.VaiTro;
+import com.hotel.suongmai.entity.*;
 import com.hotel.suongmai.exception.RoomAlreadyCleanedException;
 import com.hotel.suongmai.exception.RoomExceptionHandler;
 import com.hotel.suongmai.exception.RoomNotFoundException;
@@ -158,7 +155,7 @@ class RoomControllerSecurityTest {
         account.setTenDangNhap(username);
         account.setMatKhauHash("encoded-password");
         account.setVaiTro(role);
-        account.setTrangThai("HOAT_DONG");
+        account.setTrangThai(TrangThaiTaiKhoan.HOAT_DONG);
 
         when(jwtTokenProvider.validateToken(token)).thenReturn(true);
         when(jwtTokenProvider.getUsernameFromJwt(token)).thenReturn(username);
