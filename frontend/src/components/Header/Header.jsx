@@ -315,6 +315,46 @@ const Header = () => {
                 {mobileMenuOpen ? 'close' : 'menu'}
               </span>
             </button>
+            <div className="absolute right-0 top-full mt-2 w-56 bg-surface border border-border-custom rounded-xl shadow-[0_14px_34px_-4px_rgba(19,42,58,0.12)] p-2 hidden group-hover:flex flex-col z-50">
+              <div className="px-3 py-1.5 text-[10px] text-text-secondary uppercase tracking-wider font-semibold">
+                Cổng đăng nhập hệ thống
+              </div>
+              <Link
+                className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs text-text-secondary hover:bg-surface-alt hover:text-text-primary transition-colors"
+                to="/dang-nhap"
+              >
+                <span className="material-symbols-outlined text-[18px] text-accent">bed</span>
+                Khách hàng lưu trú
+              </Link>
+              <Link
+                className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs text-text-secondary hover:bg-surface-alt hover:text-text-primary transition-colors"
+                to="/dang-nhap"
+              >
+                <span className="material-symbols-outlined text-[18px] text-primary">concierge</span>
+                Lễ tân tiếp đón
+              </Link>
+              <Link
+                className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs text-text-secondary hover:bg-surface-alt hover:text-text-primary transition-colors"
+                to="/dang-nhap"
+              >
+                <span className="material-symbols-outlined text-[18px] text-text-secondary">cleaning_services</span>
+                Tổ Buồng phòng
+              </Link>
+              <Link
+                className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs text-text-secondary hover:bg-surface-alt hover:text-text-primary transition-colors"
+                to="/dang-nhap"
+              >
+                <span className="material-symbols-outlined text-[18px] text-accent">hotel</span>
+                Chủ khách sạn
+              </Link>
+              <Link
+                className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs text-text-secondary hover:bg-surface-alt hover:text-text-primary transition-colors"
+                to="/dang-nhap"
+              >
+                <span className="material-symbols-outlined text-[18px] text-danger-custom">admin_panel_settings</span>
+                Quản trị viên
+              </Link>
+            </div>
           </div>
         </div>
 
