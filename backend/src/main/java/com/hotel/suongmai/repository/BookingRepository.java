@@ -9,17 +9,17 @@ import org.springframework.stereotype.Repository;
 import java.time.LocalDate;
 
 @Repository
-    public interface BookingRepository extends JpaRepository<Booking, String> {
-        @Query("""
-            SELECT COUNT(b) > 0 FROM Booking b
-            WHERE b.room.roomCategory.id = :categoryId
-              AND b.status NOT IN ('CANCELLED', 'DA_HUY')
-              AND b.checkInDate <= :toDate
-              AND b.checkOutDate >= :fromDate
+public interface BookingRepository extends JpaRepository<Booking, String> {
+    @Query("""
+            SELECT COUNT(detail) > 0 FROM BookingDetail detail
+            WHERE detail.room.roomCategory.id = :categoryId
+              AND detail.booking.status <> com.hotel.suongmai.entity.BookingStatus.DA_HUY
+              AND detail.expectedCheckInDate <= :toDate
+              AND detail.expectedCheckOutDate >= :fromDate
         """)
-        boolean existsActiveBookingsInDateRange(
+    boolean existsActiveBookingsInDateRange(
             @Param("categoryId") String categoryId,
             @Param("fromDate") LocalDate fromDate,
             @Param("toDate") LocalDate toDate
-        );
-    }
+    );
+}
