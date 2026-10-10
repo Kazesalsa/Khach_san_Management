@@ -133,41 +133,41 @@ const Header = () => {
               <div className="px-3 py-1.5 text-[10px] text-text-secondary uppercase tracking-wider font-semibold">
                 Cổng đăng nhập hệ thống
               </div>
-              <a
+              <Link
                 className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs text-text-secondary hover:bg-surface-alt hover:text-text-primary transition-colors"
-                href="#"
+                to="/dang-nhap"
               >
                 <span className="material-symbols-outlined text-[18px] text-accent">bed</span>
                 Khách hàng lưu trú
-              </a>
-              <a
+              </Link>
+              <Link
                 className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs text-text-secondary hover:bg-surface-alt hover:text-text-primary transition-colors"
-                href="#"
+                to="/dang-nhap"
               >
                 <span className="material-symbols-outlined text-[18px] text-primary">concierge</span>
                 Lễ tân tiếp đón
-              </a>
-              <a
+              </Link>
+              <Link
                 className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs text-text-secondary hover:bg-surface-alt hover:text-text-primary transition-colors"
-                href="#"
+                to="/dang-nhap"
               >
                 <span className="material-symbols-outlined text-[18px] text-text-secondary">cleaning_services</span>
                 Tổ Buồng phòng
-              </a>
-              <a
+              </Link>
+              <Link
                 className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs text-text-secondary hover:bg-surface-alt hover:text-text-primary transition-colors"
-                href="#"
+                to="/dang-nhap"
               >
                 <span className="material-symbols-outlined text-[18px] text-accent">hotel</span>
                 Chủ khách sạn
-              </a>
-              <a
+              </Link>
+              <Link
                 className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs text-text-secondary hover:bg-surface-alt hover:text-text-primary transition-colors"
-                href="#"
+                to="/dang-nhap"
               >
                 <span className="material-symbols-outlined text-[18px] text-danger-custom">admin_panel_settings</span>
                 Quản trị viên
-              </a>
+              </Link>
             </div>
           </div>
 
