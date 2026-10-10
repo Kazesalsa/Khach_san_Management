@@ -214,7 +214,7 @@ export default function AuthPage({ mode }) {
 
       <main
         id="auth-main"
-        className="mx-auto flex w-full max-w-[1240px] flex-1 flex-col justify-center px-4 py-7 sm:px-8 sm:py-10 lg:py-12"
+        className="mx-auto flex w-full max-w-[1240px] flex-1 flex-col justify-start px-4 py-7 sm:px-8 sm:py-10 lg:justify-center lg:py-12"
       >
         <div className="mb-5 flex items-center justify-between gap-3 text-xs text-text-secondary">
           <span>
@@ -228,7 +228,7 @@ export default function AuthPage({ mode }) {
           </span>
         </div>
 
-        <div className="grid overflow-hidden rounded-2xl border border-border-custom bg-surface shadow-[0_20px_60px_-28px_rgba(19,42,58,.28)] lg:grid-cols-[.95fr_1.05fr]">
+        <div className="grid rounded-2xl border border-border-custom bg-surface shadow-[0_20px_60px_-28px_rgba(19,42,58,.28)] lg:grid-cols-[.95fr_1.05fr]">
           <aside className="auth-visual relative hidden min-h-[680px] flex-col justify-between overflow-hidden p-10 text-text-on-dark lg:flex">
             <div className="relative z-10">
               <span className="inline-flex items-center gap-2 rounded-full border border-accent/40 bg-primary-dark/40 px-3 py-2 text-[10px] font-semibold tracking-[.14em] text-background backdrop-blur-sm">
@@ -269,7 +269,7 @@ export default function AuthPage({ mode }) {
             initial={reduce ? false : { opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3 }}
-            className="flex flex-col justify-center bg-surface px-5 py-9 sm:px-12 sm:py-11 lg:px-14"
+            className="flex flex-col justify-center bg-surface px-5 py-8 sm:px-12 sm:py-11 lg:px-14"
           >
             <p className="mb-3 text-[10px] font-bold tracking-[.2em] text-accent">
               {c.eyebrow}
