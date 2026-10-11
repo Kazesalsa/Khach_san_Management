@@ -49,17 +49,8 @@ function CheckoutModal({ room, onClose, onConfirmed }) {
         onClose();
       }, 1800);
     } catch (err) {
-      // Fallback: giả lập thành công khi backend chưa có endpoint
-      if (err.response?.status === 404 || err.code === 'ERR_NETWORK' || !err.response) {
-        setDone(true);
-        setTimeout(() => {
-          onConfirmed(room.id);
-          onClose();
-        }, 1800);
-      } else {
-        setError(err.response?.data?.message || `Lỗi từ máy chủ (${err.response?.status}). Vui lòng thử lại.`);
-        setBusy(false);
-      }
+      setError(err.response?.data?.message || `Lỗi từ máy chủ (${err.response?.status || 'kết nối'}). Vui lòng thử lại.`);
+      setBusy(false);
     }
   };
 
