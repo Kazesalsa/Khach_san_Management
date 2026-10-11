@@ -106,8 +106,8 @@ function RoomAvailabilityPage() {
     try {
       const response = await axios.get(`${API_BASE}/rooms/available`, {
         params: {
-          checkIn: toDateString(checkIn),
-          checkOut: toDateString(checkOut),
+          from_date: toDateString(checkIn),
+          to_date: toDateString(checkOut),
         },
       });
       setRooms(response.data);
