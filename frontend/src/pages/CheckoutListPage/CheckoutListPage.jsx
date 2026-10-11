@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import axios from 'axios';
@@ -377,6 +377,10 @@ function RoomCard({ room, onOpenCheckout }) {
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
 export default function CheckoutListPage() {
+  useEffect(() => {
+    document.title = 'Danh Sách Phòng Cần Trả | Sương Mai Hotel';
+  }, []);
+
   const [rooms,        setRooms]        = useState(INITIAL_ROOMS);
   const [search,       setSearch]       = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
@@ -418,27 +422,27 @@ export default function CheckoutListPage() {
     <div className="min-h-screen bg-background">
       {/* Header */}
       <header className="bg-primary text-text-on-dark border-b border-white/10">
-        <div className="max-w-6xl mx-auto px-6 py-6">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6">
           <div className="flex items-start justify-between gap-4">
             <div>
               <p className="text-accent text-xs font-bold uppercase tracking-[0.2em]">Sương Mai Hotel</p>
-              <h1 className="font-headline text-3xl font-bold mt-1">Danh Sách Phòng Cần Trả</h1>
+              <h1 className="font-headline text-2xl sm:text-3xl font-bold mt-1">Danh Sách Phòng Cần Trả</h1>
               <p className="text-text-on-dark/70 text-sm mt-2">
                 Bấm vào thẻ phòng để xem chi tiết và xác nhận trả phòng
               </p>
             </div>
             <Link
               to="/"
-              className="inline-flex items-center gap-2 rounded-xl border border-white/20 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-white/10 shrink-0"
+              className="inline-flex items-center gap-2 rounded-xl border border-white/20 px-3 sm:px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-white/10 shrink-0"
             >
               <span className="material-symbols-outlined text-[18px]">arrow_back</span>
-              Về trang chủ
+              <span className="hidden sm:inline">Về trang chủ</span>
             </Link>
           </div>
         </div>
       </header>
 
-      <main className="max-w-6xl mx-auto px-6 py-8 space-y-6">
+      <main className="max-w-6xl mx-auto px-4 sm:px-6 py-8 space-y-6">
 
         {/* Stat cards */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
