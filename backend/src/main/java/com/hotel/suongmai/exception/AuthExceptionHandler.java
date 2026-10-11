@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import com.hotel.suongmai.dto.AuthErrorResponse;
+import com.hotel.suongmai.dto.RegisterRequest;
 import com.hotel.suongmai.controller.AuthController;
 
 @RestControllerAdvice(assignableTypes = AuthController.class)
@@ -45,12 +46,21 @@ public class AuthExceptionHandler {
                 .body(new AuthErrorResponse(exception.getMessage()));
     }
 
+    @ExceptionHandler({EmailAlreadyExistsException.class, PasswordConfirmationException.class})
+    public ResponseEntity<AuthErrorResponse> handleInvalidRegistration(RuntimeException exception) {
+        return ResponseEntity.badRequest()
+                .body(new AuthErrorResponse(exception.getMessage()));
+    }
+
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<AuthErrorResponse> handleValidation(MethodArgumentNotValidException exception) {
         Map<String, String> errors = new LinkedHashMap<>();
         exception.getBindingResult().getFieldErrors()
                 .forEach(error -> errors.putIfAbsent(error.getField(), error.getDefaultMessage()));
+        String message = exception.getBindingResult().getTarget() instanceof RegisterRequest
+                ? "Dữ liệu đăng ký không hợp lệ"
+                : "Dữ liệu đăng nhập không hợp lệ";
         return ResponseEntity.badRequest()
-                .body(new AuthErrorResponse("Dữ liệu đăng nhập không hợp lệ", errors));
+                .body(new AuthErrorResponse(message, errors));
     }
 }

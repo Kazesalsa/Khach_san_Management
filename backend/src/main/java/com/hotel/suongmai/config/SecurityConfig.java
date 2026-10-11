@@ -71,6 +71,7 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                     // Cho phép public API đăng nhập và kiểm tra hệ thống
                     .requestMatchers(HttpMethod.POST, "/api/auth/login").permitAll()
+                    .requestMatchers(HttpMethod.POST, "/api/auth/register").permitAll()
                     .requestMatchers(HttpMethod.GET, "/api/rooms/available").permitAll()
                     .requestMatchers("/api/test").permitAll()
                     // Tất cả các API còn lại đều phải có JWT Token hợp lệ

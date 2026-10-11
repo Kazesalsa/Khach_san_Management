@@ -1,21 +1,30 @@
 package com.hotel.suongmai.service;
 
+import java.util.Locale;
+
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.hotel.suongmai.dto.LoginRequest;
 import com.hotel.suongmai.dto.LoginResponse;
 import com.hotel.suongmai.dto.ProfileResponse;
+import com.hotel.suongmai.dto.RegisterRequest;
+import com.hotel.suongmai.dto.RegisterResponse;
 import com.hotel.suongmai.entity.KhachHang;
 import com.hotel.suongmai.entity.NhanVien;
 import com.hotel.suongmai.entity.TaiKhoan;
+import com.hotel.suongmai.entity.TrangThaiTaiKhoan;
 import com.hotel.suongmai.entity.VaiTro;
+import com.hotel.suongmai.exception.EmailAlreadyExistsException;
+import com.hotel.suongmai.exception.PasswordConfirmationException;
 import com.hotel.suongmai.exception.ProfileNotFoundException;
 import com.hotel.suongmai.repository.KhachHangRepository;
 import com.hotel.suongmai.repository.NhanVienRepository;
+import com.hotel.suongmai.repository.TaiKhoanRepository;
 import com.hotel.suongmai.security.JwtTokenProvider;
 import com.hotel.suongmai.security.TaiKhoanDetails;
 
@@ -29,6 +38,8 @@ public class AuthService {
     private final JwtTokenProvider jwtTokenProvider;
     private final KhachHangRepository khachHangRepository;
     private final NhanVienRepository nhanVienRepository;
+    private final TaiKhoanRepository taiKhoanRepository;
+    private final PasswordEncoder passwordEncoder;
 
     public LoginResponse login(LoginRequest request) {
         Authentication authentication = authenticationManager.authenticate(
@@ -43,6 +54,32 @@ public class AuthService {
                 account.getId(),
                 account.getTenDangNhap(),
                 account.getVaiTro());
+    }
+
+    @Transactional
+    public RegisterResponse register(RegisterRequest request) {
+        String email = request.email().trim().toLowerCase(Locale.ROOT);
+
+        if (!request.password().equals(request.confirmPassword())) {
+            throw new PasswordConfirmationException("Mật khẩu xác nhận không khớp");
+        }
+
+        if (taiKhoanRepository.existsByTenDangNhapIgnoreCase(email)) {
+            throw new EmailAlreadyExistsException("Email đã tồn tại trong hệ thống");
+        }
+
+        TaiKhoan account = new TaiKhoan();
+        account.setTenDangNhap(email);
+        account.setMatKhauHash(passwordEncoder.encode(request.password()));
+        account.setVaiTro(VaiTro.KHACH_HANG);
+        account.setTrangThai(TrangThaiTaiKhoan.HOAT_DONG);
+
+        TaiKhoan savedAccount = taiKhoanRepository.save(account);
+        return new RegisterResponse(
+                savedAccount.getId(),
+                savedAccount.getTenDangNhap(),
+                savedAccount.getVaiTro(),
+                "Đăng ký tài khoản thành công");
     }
 
     @Transactional(readOnly = true)
