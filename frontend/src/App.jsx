@@ -12,6 +12,9 @@ import AuthPage from './auth/AuthPage';
 import SystemCheckPage from './pages/SystemCheckPage/SystemCheckPage';
 import HousekeepingDashboardPage from './pages/HousekeepingDashboardPage/HousekeepingDashboardPage';
 import RoomAvailabilityPage from './pages/RoomAvailabilityPage/RoomAvailabilityPage';
+import RevenueDashboardPage from './pages/RevenueDashboardPage/RevenueDashboardPage';
+import BookingPage from './pages/BookingPage/BookingPage';
+import CheckoutListPage from './pages/CheckoutListPage/CheckoutListPage';
 import './auth/auth.css';
 
 function App() {
@@ -23,6 +26,9 @@ function App() {
           <Route path="/admin/price-lists" element={<PriceListPage />} />
           <Route path="/admin/housekeeping" element={<HousekeepingDashboardPage />} />
           <Route path="/rooms/available" element={<RoomAvailabilityPage />} />
+          <Route path="/admin/revenue" element={<RevenueDashboardPage />} />
+          <Route path="/booking" element={<BookingPage />} />
+          <Route path="/admin/checkout" element={<CheckoutListPage />} />
           <Route path="/dang-nhap" element={<AuthPage key="login" mode="login" />} />
           <Route path="/dang-ky" element={<AuthPage key="register" mode="register" />} />
           <Route path="/quen-mat-khau" element={<AuthPage key="forgot" mode="forgot" />} />
