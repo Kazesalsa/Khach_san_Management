@@ -271,3 +271,31 @@ CREATE TABLE IF NOT EXISTS su_dung_dich_vu (
     FOREIGN KEY (dich_vu_id) REFERENCES dich_vu(id) ON DELETE RESTRICT,
     FOREIGN KEY (nhan_vien_ghi_nhan_id) REFERENCES nhan_vien(ma_nhan_vien) ON DELETE RESTRICT
 );
+
+-- ============================================================
+-- CÁC CHỈ MỤC (INDEXES) TỐI ƯU HIỆU NĂNG CHO UC-01, UC-04, UC-05
+-- ============================================================
+-- 1. Tối ưu tìm kiếm danh sách đơn đặt phòng theo khách hàng
+CREATE INDEX IF NOT EXISTS idx_pdp_khach_hang_id 
+ON phieu_dat_phong(khach_hang_id);
+
+-- 2. Tối ưu lấy danh sách phòng trong một đơn đặt phòng (JOIN/Lookup)
+CREATE INDEX IF NOT EXISTS idx_ctdp_phieu_dat_phong_id 
+ON chi_tiet_dat_phong(phieu_dat_phong_id);
+
+-- 3. Tối ưu thuật toán tra cứu phòng trống và kiểm tra trùng lặp đặt phòng theo khoảng ngày
+CREATE INDEX IF NOT EXISTS idx_ctdp_room_dates 
+ON chi_tiet_dat_phong(phong_id, ngay_nhan_du_kien, ngay_tra_du_kien);
+
+-- 4. Tối ưu lọc danh sách đơn đặt phòng theo trạng thái và thời gian tạo
+CREATE INDEX IF NOT EXISTS idx_pdp_trang_thai_ngay_tao 
+ON phieu_dat_phong(trang_thai, ngay_tao DESC);
+
+-- 5. Tối ưu tra cứu bảng giá theo loại phòng và khoảng thời gian áp dụng
+CREATE INDEX IF NOT EXISTS idx_gia_phong_lookup 
+ON gia_phong(ma_loai_phong, ngay_bat_dau, ngay_ket_thuc);
+
+-- 6. Tối ưu tìm kiếm phòng theo loại phòng
+CREATE INDEX IF NOT EXISTS idx_phong_loai_phong 
+ON phong(ma_loai_phong);
+
