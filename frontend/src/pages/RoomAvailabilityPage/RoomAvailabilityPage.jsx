@@ -5,7 +5,7 @@ import DatePicker from '../../components/ui/DatePicker';
 import Badge from '../../components/ui/Badge';
 import Button from '../../components/ui/Button';
 
-const API_BASE = 'http://localhost:8080/api';
+const API_BASE = '/api';
 
 // Định dạng ngày về yyyy-MM-dd để gửi lên API
 const toDateString = (date) => date;
@@ -107,12 +107,17 @@ function RoomAvailabilityPage() {
     setRooms(null);
     setSearched(false);
 
+    // Lấy token từ storage (remember me → localStorage, ngược lại → sessionStorage)
+    const token =
+      localStorage.getItem('authToken') || sessionStorage.getItem('authToken');
+
     try {
       const response = await axios.get(`${API_BASE}/rooms/available`, {
         params: {
           from_date: toDateString(inDate),
           to_date: toDateString(outDate),
         },
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
       setRooms(response.data);
       setSearched(true);
