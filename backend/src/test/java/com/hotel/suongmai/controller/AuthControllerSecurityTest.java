@@ -21,10 +21,12 @@ import org.springframework.test.web.servlet.MockMvc;
 import com.hotel.suongmai.config.SecurityConfig;
 import com.hotel.suongmai.dto.LoginResponse;
 import com.hotel.suongmai.dto.ProfileResponse;
+import com.hotel.suongmai.dto.RegisterResponse;
 import com.hotel.suongmai.entity.TaiKhoan;
 import com.hotel.suongmai.entity.TrangThaiTaiKhoan;
 import com.hotel.suongmai.entity.VaiTro;
 import com.hotel.suongmai.exception.AuthExceptionHandler;
+import com.hotel.suongmai.exception.EmailAlreadyExistsException;
 import com.hotel.suongmai.security.JwtAuthenticationFilter;
 import com.hotel.suongmai.security.JwtTokenProvider;
 import com.hotel.suongmai.security.TaiKhoanDetails;
@@ -61,6 +63,62 @@ class AuthControllerSecurityTest {
                 .andExpect(jsonPath("$.token").value("signed.jwt.token"))
                 .andExpect(jsonPath("$.tokenType").value("Bearer"))
                 .andExpect(jsonPath("$.role").value("CHU_KHACH_SAN"));
+    }
+
+    @Test
+    void registerIsPublicAndCreatesCustomerAccount() throws Exception {
+        when(authService.register(any())).thenReturn(new RegisterResponse(
+                "account-new", "customer@example.com", VaiTro.KHACH_HANG,
+                "Đăng ký tài khoản thành công"));
+
+        mockMvc.perform(post("/api/auth/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "email":"customer@example.com",
+                                  "password":"password123",
+                                  "confirmPassword":"password123"
+                                }
+                                """))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.accountId").value("account-new"))
+                .andExpect(jsonPath("$.email").value("customer@example.com"))
+                .andExpect(jsonPath("$.role").value("KHACH_HANG"));
+    }
+
+    @Test
+    void registerRejectsInvalidEmailAndShortPassword() throws Exception {
+        mockMvc.perform(post("/api/auth/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "email":"not-an-email",
+                                  "password":"short",
+                                  "confirmPassword":"short"
+                                }
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("Dữ liệu đăng ký không hợp lệ"))
+                .andExpect(jsonPath("$.errors.email").exists())
+                .andExpect(jsonPath("$.errors.password").exists());
+    }
+
+    @Test
+    void registerReturnsBadRequestForExistingEmail() throws Exception {
+        when(authService.register(any()))
+                .thenThrow(new EmailAlreadyExistsException("Email đã tồn tại trong hệ thống"));
+
+        mockMvc.perform(post("/api/auth/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "email":"customer@example.com",
+                                  "password":"password123",
+                                  "confirmPassword":"password123"
+                                }
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("Email đã tồn tại trong hệ thống"));
     }
 
     @Test
