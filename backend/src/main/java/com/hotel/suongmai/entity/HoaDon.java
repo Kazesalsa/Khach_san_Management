@@ -39,6 +39,7 @@ public class HoaDon {
     private BigDecimal remainingAmount;
 
     @Enumerated(EnumType.STRING)
+    @org.hibernate.annotations.JdbcTypeCode(org.hibernate.type.SqlTypes.NAMED_ENUM)
     @Column(name = "trang_thai", nullable = false)
     private TrangThaiHoaDon status;
 

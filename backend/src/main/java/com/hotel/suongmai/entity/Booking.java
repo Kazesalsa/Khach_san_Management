@@ -36,6 +36,7 @@ public class Booking {
     private java.math.BigDecimal requiredDeposit;
 
     @Enumerated(EnumType.STRING)
+    @org.hibernate.annotations.JdbcTypeCode(org.hibernate.type.SqlTypes.NAMED_ENUM)
     @Column(name = "trang_thai", nullable = false)
     private BookingStatus status;
 }
