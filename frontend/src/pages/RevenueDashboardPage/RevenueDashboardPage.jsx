@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import {
   BarChart,
@@ -128,6 +128,10 @@ const CustomTooltip = ({ active, payload, label }) => {
 
 // ─── Component chính ──────────────────────────────────────────────────────────
 export default function RevenueDashboardPage() {
+  useEffect(() => {
+    document.title = 'Báo Cáo Doanh Thu | Sương Mai Hotel';
+  }, []);
+
   const [chartType, setChartType] = useState('bar'); // 'bar' | 'line'
   const [period, setPeriod] = useState('month');     // 'week' | 'month'
 
@@ -150,31 +154,22 @@ export default function RevenueDashboardPage() {
     <div className="min-h-screen bg-background">
       {/* Header */}
       <header className="bg-primary text-text-on-dark border-b border-white/10">
-        <div className="max-w-6xl mx-auto px-6 py-6">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6">
           <div className="flex items-start justify-between gap-4">
             <div>
-              <p className="text-accent text-xs font-bold uppercase tracking-[0.2em]">
-                Sương Mai Hotel
-              </p>
-              <h1 className="font-headline text-3xl font-bold mt-1">
-                Báo Cáo Doanh Thu
-              </h1>
-              <p className="text-text-on-dark/70 text-sm mt-2">
-                Biểu đồ doanh thu và chi tiết theo từng loại phòng
-              </p>
+              <p className="text-accent text-xs font-bold uppercase tracking-[0.2em]">Sương Mai Hotel</p>
+              <h1 className="font-headline text-2xl sm:text-3xl font-bold mt-1">Báo Cáo Doanh Thu</h1>
+              <p className="text-text-on-dark/70 text-sm mt-2">Biểu đồ doanh thu và chi tiết theo từng loại phòng</p>
             </div>
-            <Link
-              to="/"
-              className="inline-flex items-center gap-2 rounded-xl border border-white/20 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-white/10 shrink-0"
-            >
+            <Link to="/" className="inline-flex items-center gap-2 rounded-xl border border-white/20 px-3 sm:px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-white/10 shrink-0">
               <span className="material-symbols-outlined text-[18px]">arrow_back</span>
-              Về trang chủ
+              <span className="hidden sm:inline">Về trang chủ</span>
             </Link>
           </div>
         </div>
       </header>
 
-      <main className="max-w-6xl mx-auto px-6 py-8 space-y-8">
+      <main className="max-w-6xl mx-auto px-4 sm:px-6 py-8 space-y-8">
 
         {/* Stat cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
