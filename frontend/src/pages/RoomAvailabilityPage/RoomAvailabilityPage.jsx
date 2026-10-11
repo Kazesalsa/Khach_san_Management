@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import axios from 'axios';
 import DatePicker from '../../components/ui/DatePicker';
 import Badge from '../../components/ui/Badge';
@@ -30,11 +31,15 @@ const formatPrice = (price) =>
   }).format(price);
 
 function RoomAvailabilityPage() {
+  const [searchParams] = useSearchParams();
   const today = new Date().toISOString().split('T')[0];
   const tomorrow = new Date(Date.now() + 86400000).toISOString().split('T')[0];
 
-  const [checkIn, setCheckIn] = useState('');
-  const [checkOut, setCheckOut] = useState('');
+  const paramCheckIn = searchParams.get('checkIn') || searchParams.get('from_date') || '';
+  const paramCheckOut = searchParams.get('checkOut') || searchParams.get('to_date') || '';
+
+  const [checkIn, setCheckIn] = useState(paramCheckIn);
+  const [checkOut, setCheckOut] = useState(paramCheckOut);
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
   const [rooms, setRooms] = useState(null); // null = chưa search, [] = không có phòng
@@ -93,10 +98,9 @@ function RoomAvailabilityPage() {
     }
   };
 
-  // Gọi API tra cứu phòng trống
-  const handleSearch = async (e) => {
-    e.preventDefault();
-    if (!validate()) return;
+  // Hàm gọi API tra cứu phòng trống
+  const fetchAvailableRooms = useCallback(async (inDate, outDate) => {
+    if (!inDate || !outDate || inDate >= outDate) return;
 
     setLoading(true);
     setApiError('');
@@ -106,8 +110,8 @@ function RoomAvailabilityPage() {
     try {
       const response = await axios.get(`${API_BASE}/rooms/available`, {
         params: {
-          from_date: toDateString(checkIn),
-          to_date: toDateString(checkOut),
+          from_date: toDateString(inDate),
+          to_date: toDateString(outDate),
         },
       });
       setRooms(response.data);
@@ -131,6 +135,22 @@ function RoomAvailabilityPage() {
     } finally {
       setLoading(false);
     }
+  }, []);
+
+  // Tự động tìm kiếm nếu có tham số truyền từ URL (ví dụ từ Trang chủ)
+  useEffect(() => {
+    if (paramCheckIn && paramCheckOut && paramCheckOut > paramCheckIn) {
+      setCheckIn(paramCheckIn);
+      setCheckOut(paramCheckOut);
+      fetchAvailableRooms(paramCheckIn, paramCheckOut);
+    }
+  }, [paramCheckIn, paramCheckOut, fetchAvailableRooms]);
+
+  // Xử lý khi người dùng bấm nút [Tìm phòng] trên form
+  const handleSearch = async (e) => {
+    if (e) e.preventDefault();
+    if (!validate()) return;
+    await fetchAvailableRooms(checkIn, checkOut);
   };
 
   // Tính số đêm
