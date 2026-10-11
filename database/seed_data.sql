@@ -233,9 +233,9 @@ BEGIN
         
         -- 5 khách VIP (3 VÀNG, 2 BẠCH KIM)
         IF i <= 3 THEN
-            INSERT INTO khach_hang_vip (khach_hang_id, hang_vip) VALUES ('customer-' || i, 'VANG');
+            INSERT INTO khach_hang_vip (id, hang_vip) VALUES ('customer-' || i, 'VANG');
         ELSIF i <= 5 THEN
-            INSERT INTO khach_hang_vip (khach_hang_id, hang_vip) VALUES ('customer-' || i, 'BACH_KIM');
+            INSERT INTO khach_hang_vip (id, hang_vip) VALUES ('customer-' || i, 'BACH_KIM');
         END IF;
     END LOOP;
 END $$;
