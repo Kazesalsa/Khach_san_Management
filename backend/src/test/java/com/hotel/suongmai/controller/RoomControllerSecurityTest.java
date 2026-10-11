@@ -45,9 +45,9 @@ class RoomControllerSecurityTest {
     @Test
     void rejectsRequestWithoutToken() throws Exception {
         mockMvc.perform(patch(ENDPOINT))
-                .andExpect(status().isForbidden())
+                .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.message")
-                        .value("Bạn không có quyền thực hiện thao tác này"));
+                        .value("Token không hợp lệ hoặc đã hết hạn"));
 
         verifyNoInteractions(roomService);
     }
@@ -58,9 +58,9 @@ class RoomControllerSecurityTest {
 
         mockMvc.perform(patch(ENDPOINT)
                         .header("Authorization", "Bearer invalid-token"))
-                .andExpect(status().isForbidden())
+                .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.message")
-                        .value("Bạn không có quyền thực hiện thao tác này"));
+                        .value("Token không hợp lệ hoặc đã hết hạn"));
 
         verifyNoInteractions(roomService);
     }

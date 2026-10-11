@@ -1,13 +1,23 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 
 const RoomSearchBar = () => {
   const navigate = useNavigate();
 
+  const today = new Date().toISOString().split('T')[0];
+  const tomorrow = new Date(Date.now() + 86400000).toISOString().split('T')[0];
+
+  const [checkIn, setCheckIn] = useState(today);
+  const [checkOut, setCheckOut] = useState(tomorrow);
+
   const handleSearchRoom = (e) => {
     e.preventDefault();
-    navigate('/rooms/available');
+    if (checkIn && checkOut) {
+      navigate(`/rooms/available?checkIn=${encodeURIComponent(checkIn)}&checkOut=${encodeURIComponent(checkOut)}`);
+    } else {
+      navigate('/rooms/available');
+    }
   };
 
   return (
@@ -29,7 +39,14 @@ const RoomSearchBar = () => {
                 Ngày nhận phòng
               </label>
               <div className="bg-background border border-border-custom rounded-xl p-3 flex flex-col hover:border-accent/50 focus-within:border-accent focus-within:ring-1 focus-within:ring-accent transition-all">
-                <input className="bg-transparent text-text-primary text-sm font-semibold focus:outline-none focus:ring-0 border-0 p-0 w-full cursor-pointer" id="check-in-date" required type="date" />
+                <input 
+                  className="bg-transparent text-text-primary text-sm font-semibold focus:outline-none focus:ring-0 border-0 p-0 w-full cursor-pointer" 
+                  id="check-in-date" 
+                  required 
+                  type="date" 
+                  value={checkIn}
+                  onChange={(e) => setCheckIn(e.target.value)}
+                />
                 <span className="text-[10px] text-text-secondary mt-1">Tối thiểu từ hôm nay</span>
               </div>
             </div>
@@ -41,7 +58,14 @@ const RoomSearchBar = () => {
                 Ngày trả phòng
               </label>
               <div className="bg-background border border-border-custom rounded-xl p-3 flex flex-col hover:border-accent/50 focus-within:border-accent focus-within:ring-1 focus-within:ring-accent transition-all">
-                <input className="bg-transparent text-text-primary text-sm font-semibold focus:outline-none focus:ring-0 border-0 p-0 w-full cursor-pointer" id="check-out-date" required type="date" />
+                <input 
+                  className="bg-transparent text-text-primary text-sm font-semibold focus:outline-none focus:ring-0 border-0 p-0 w-full cursor-pointer" 
+                  id="check-out-date" 
+                  required 
+                  type="date" 
+                  value={checkOut}
+                  onChange={(e) => setCheckOut(e.target.value)}
+                />
                 <span className="text-[10px] text-text-secondary mt-1">Sau ngày nhận phòng</span>
               </div>
             </div>

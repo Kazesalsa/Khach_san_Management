@@ -2,9 +2,9 @@ name: Java & React CI
 
 on:
   push:
-    branches: [ "master", "main" ]
+    branches: [ "develop", "main" ]
   pull_request:
-    branches: [ "master", "main" ]
+    branches: [ "develop", "main" ]
 
 jobs:
   backend-test:
@@ -13,13 +13,13 @@ jobs:
     # Khoi tao Database ao cho CI de chay Test Spring Boot
     services:
       postgres:
-        image: postgres:16-alpine
+        image: postgres:15-alpine
         env:
-          POSTGRES_DB: khach_san_suong_mai
+          POSTGRES_DB: suongmai_db
           POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: rootpassword
+          POSTGRES_PASSWORD: 12345
         ports:
-          - 5432:5432
+          - 5433:5432
         options: >-
           --health-cmd pg_isready
           --health-interval 10s
@@ -29,10 +29,10 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     
-    - name: Set up JDK 21
+    - name: Set up JDK 17
       uses: actions/setup-java@v4
       with:
-        java-version: '21'
+        java-version: '17'
         distribution: 'temurin'
         cache: maven
         

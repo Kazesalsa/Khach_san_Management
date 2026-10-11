@@ -102,6 +102,19 @@ const Header = () => {
             </NavLink>
 
             <NavLink
+              to="/rooms/available"
+              className={({ isActive }) =>
+                `text-sm font-medium py-1 transition-colors relative ${
+                  isActive
+                    ? "text-primary font-bold after:content-[''] after:absolute after:-bottom-1 after:left-0 after:right-0 after:h-[2px] after:bg-accent"
+                    : 'text-text-secondary hover:text-primary'
+                }`
+              }
+            >
+              Tra cứu phòng
+            </NavLink>
+
+            <NavLink
               to="/services"
               className={({ isActive }) =>
                 `text-sm font-medium py-1 transition-colors relative ${
@@ -296,7 +309,7 @@ const Header = () => {
 
             {/* Direct Booking CTA */}
             <Link
-              to="/rooms"
+              to="/rooms/available"
               className="hidden sm:flex bg-accent text-primary hover:bg-accent-hover font-semibold text-xs px-3.5 sm:px-4 py-2 sm:py-2.5 rounded-lg shadow-md hover:shadow-lg transition-all tracking-wide items-center justify-center shrink-0"
             >
               Đặt phòng ngay
@@ -376,9 +389,21 @@ const Header = () => {
             <Link
               to="/rooms"
               onClick={() => setMobileMenuOpen(false)}
-              className="text-sm font-semibold text-accent py-2 border-b border-border-custom/50 flex items-center justify-between"
+              className="text-sm font-semibold text-text-secondary py-2 border-b border-border-custom/50 flex items-center justify-between"
             >
               <span>Phòng & Bảng giá</span>
+
+              <span className="material-symbols-outlined text-[16px]">
+                chevron_right
+              </span>
+            </Link>
+
+            <Link
+              to="/rooms/available"
+              onClick={() => setMobileMenuOpen(false)}
+              className="text-sm font-semibold text-accent py-2 border-b border-border-custom/50 flex items-center justify-between"
+            >
+              <span>Tra cứu phòng</span>
 
               <span className="material-symbols-outlined text-[16px]">
                 chevron_right

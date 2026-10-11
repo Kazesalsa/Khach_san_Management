@@ -121,9 +121,9 @@ CREATE TABLE IF NOT EXISTS khach_hang (
 );
 
 CREATE TABLE IF NOT EXISTS khach_hang_vip (
-    khach_hang_id VARCHAR(36) PRIMARY KEY,
+    id VARCHAR(36) PRIMARY KEY,
     hang_vip hang_vip_enum NOT NULL,
-    FOREIGN KEY (khach_hang_id) REFERENCES khach_hang(id) ON DELETE CASCADE
+    FOREIGN KEY (id) REFERENCES khach_hang(id) ON DELETE CASCADE
 );
 
 CREATE TABLE IF NOT EXISTS phieu_dat_phong (
