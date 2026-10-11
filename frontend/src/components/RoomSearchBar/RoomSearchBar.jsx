@@ -7,7 +7,7 @@ const RoomSearchBar = () => {
 
   const handleSearchRoom = (e) => {
     e.preventDefault();
-    navigate('/rooms');
+    navigate('/rooms/available');
   };
 
   return (
