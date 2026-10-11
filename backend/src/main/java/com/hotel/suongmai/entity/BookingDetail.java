@@ -1,16 +1,19 @@
 package com.hotel.suongmai.entity;
 
 import jakarta.persistence.*;
-import lombok.Data;
-import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
-import java.math.BigDecimal;
+import lombok.Builder;
+import lombok.Data;
+import lombok.EqualsAndHashCode;
+import lombok.NoArgsConstructor;
+import lombok.ToString;
 
 @Entity
 @Table(name = "chi_tiet_dat_phong")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
+@Builder
 public class BookingDetail {
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
@@ -19,6 +22,8 @@ public class BookingDetail {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "phieu_dat_phong_id", nullable = false)
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
     private Booking booking;
 
     @ManyToOne(fetch = FetchType.LAZY)
