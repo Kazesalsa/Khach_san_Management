@@ -9,6 +9,9 @@ import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDate;
+import java.util.List;
+
 @Service
 @RequiredArgsConstructor
 public class RoomService {
@@ -26,5 +29,15 @@ public class RoomService {
         room.setCleaningStatus(CleaningStatus.DA_DON_XONG);
 
         return roomRepository.save(room);
+    }
+
+    @Transactional()
+    public List<Room> findAvailableRooms(LocalDate fromDate, LocalDate toDate) {
+        if (fromDate == null || toDate == null || !toDate.isAfter(fromDate)) {
+            throw new IllegalArgumentException(
+                    "Ngày trả phòng phải sau ngày nhận phòng");
+        }
+
+        return roomRepository.findAvailableRooms(fromDate, toDate);
     }
 }

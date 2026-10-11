@@ -14,6 +14,8 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.Optional;
+import java.time.LocalDate;
+import java.util.List;
 
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
@@ -74,5 +76,48 @@ class RoomServiceTest {
                 .hasMessageContaining("Phòng đã được dọn");
 
         verify(roomRepository, never()).save(mockRoom);
+    }
+
+    @Test
+    @DisplayName("Thành công: Trả về danh sách phòng trống và truyền đúng khoảng ngày xuống repository")
+    void findAvailableRooms_ReturnsAvailableRooms() {
+        LocalDate fromDate = LocalDate.of(2026, 10, 12);
+        LocalDate toDate = LocalDate.of(2026, 10, 15);
+        List<Room> availableRooms = List.of(mockRoom);
+        when(roomRepository.findAvailableRooms(fromDate, toDate)).thenReturn(availableRooms);
+
+        List<Room> result = roomService.findAvailableRooms(fromDate, toDate);
+
+        assertThat(result).isEqualTo(availableRooms);
+        verify(roomRepository).findAvailableRooms(fromDate, toDate);
+    }
+
+    @Test
+    @DisplayName("Thất bại: Từ chối khoảng ngày khi ngày trả không sau ngày nhận")
+    void findAvailableRooms_ThrowsException_WhenDateRangeIsInvalid() {
+        LocalDate fromDate = LocalDate.of(2026, 10, 15);
+        LocalDate toDate = LocalDate.of(2026, 10, 12);
+
+        assertThatThrownBy(() -> roomService.findAvailableRooms(fromDate, toDate))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("Ngày trả phòng phải sau ngày nhận phòng");
+
+        verifyNoInteractions(roomRepository);
+    }
+
+    @Test
+    @DisplayName("Thất bại: Từ chối khoảng ngày bị thiếu ngày nhận hoặc ngày trả")
+    void findAvailableRooms_ThrowsException_WhenDateIsMissing() {
+        LocalDate validDate = LocalDate.of(2026, 10, 15);
+
+        assertThatThrownBy(() -> roomService.findAvailableRooms(null, validDate))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("Ngày trả phòng phải sau ngày nhận phòng");
+
+        assertThatThrownBy(() -> roomService.findAvailableRooms(validDate, null))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("Ngày trả phòng phải sau ngày nhận phòng");
+
+        verifyNoInteractions(roomRepository);
     }
 }
