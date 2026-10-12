@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import axios from 'axios';
 import Badge from '../../components/ui/Badge';
 import Button from '../../components/ui/Button';
+import InvoiceModal from '../../components/Invoice/InvoiceModal';
 
 // ─── Dữ liệu mẫu ─────────────────────────────────────────────────────────────
 const INITIAL_ROOMS = [
@@ -271,7 +272,7 @@ function CheckoutModal({ room, onClose, onConfirmed }) {
 }
 
 // ─── Room Card ────────────────────────────────────────────────────────────────
-function RoomCard({ room, onOpenCheckout }) {
+function RoomCard({ room, onOpenCheckout, onOpenInvoice }) {
   const daysLeft  = getDaysLeft(room.checkOut);
   const remaining = room.totalAmount - room.depositPaid;
 
@@ -366,9 +367,20 @@ function RoomCard({ room, onOpenCheckout }) {
         </div>
 
         {/* Hint click */}
-        <div className="mt-3 flex items-center justify-center gap-1.5 text-[11px] text-text-secondary group-hover:text-accent transition-colors">
+        <div className="mt-3 flex gap-2" onClick={(e) => e.stopPropagation()}>
+          <Button variant="outline" size="sm" iconLeft="receipt_long" className="flex-1"
+            onClick={(e) => { e.stopPropagation(); onOpenInvoice(room); }}>
+            Hóa đơn
+          </Button>
+          <Button
+            variant="secondary" size="sm" iconLeft="logout" className="flex-1"
+            onClick={(e) => { e.stopPropagation(); onOpenCheckout(room); }}>
+            Trả phòng
+          </Button>
+        </div>
+        <div className="mt-2 flex items-center justify-center gap-1.5 text-[11px] text-text-secondary group-hover:text-accent transition-colors">
           <span className="material-symbols-outlined text-[15px]">touch_app</span>
-          Bấm để xem chi tiết & trả phòng
+          Bấm thẻ để xác nhận trả phòng
         </div>
       </div>
     </div>
@@ -387,6 +399,8 @@ export default function CheckoutListPage() {
   const [filterFloor,  setFilterFloor]  = useState('all');
   const [selectedRoom, setSelectedRoom] = useState(null);
   const [showModal,    setShowModal]    = useState(false);
+  const [invoiceRoom,  setInvoiceRoom]  = useState(null);
+  const [showInvoice,  setShowInvoice]  = useState(false);
 
   const floors = useMemo(() => [...new Set(rooms.map((r) => r.floor))].sort(), [rooms]);
 
@@ -406,6 +420,11 @@ export default function CheckoutListPage() {
   const handleOpenCheckout = useCallback((room) => {
     setSelectedRoom(room);
     setShowModal(true);
+  }, []);
+
+  const handleOpenInvoice = useCallback((room) => {
+    setInvoiceRoom(room);
+    setShowInvoice(true);
   }, []);
 
   const handleCloseModal = useCallback(() => {
@@ -554,7 +573,7 @@ export default function CheckoutListPage() {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
               {filtered.map((room) => (
-                <RoomCard key={room.id} room={room} onOpenCheckout={handleOpenCheckout} />
+                <RoomCard key={room.id} room={room} onOpenCheckout={handleOpenCheckout} onOpenInvoice={handleOpenInvoice} />
               ))}
             </div>
           </>
@@ -568,6 +587,17 @@ export default function CheckoutListPage() {
             room={selectedRoom}
             onClose={handleCloseModal}
             onConfirmed={handleCheckedOut}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* Invoice Modal */}
+      <AnimatePresence>
+        {showInvoice && (
+          <InvoiceModal
+            isOpen={showInvoice}
+            onClose={() => { setShowInvoice(false); setTimeout(() => setInvoiceRoom(null), 300); }}
+            room={invoiceRoom}
           />
         )}
       </AnimatePresence>
