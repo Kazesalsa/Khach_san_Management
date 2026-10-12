@@ -598,6 +598,11 @@ export default function CheckoutListPage() {
             isOpen={showInvoice}
             onClose={() => { setShowInvoice(false); setTimeout(() => setInvoiceRoom(null), 300); }}
             room={invoiceRoom}
+            onPaymentConfirmed={(roomId) => {
+              setRooms((prev) => prev.map((r) => r.id === roomId ? { ...r, paymentStatus: 'paid', depositPaid: r.totalAmount } : r));
+              setShowInvoice(false);
+              setTimeout(() => setInvoiceRoom(null), 300);
+            }}
           />
         )}
       </AnimatePresence>
