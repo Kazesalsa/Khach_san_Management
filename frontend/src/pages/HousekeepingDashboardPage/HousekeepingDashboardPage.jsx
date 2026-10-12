@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import Button from '../../components/ui/Button';
 import Badge from '../../components/ui/Badge';
 
@@ -16,6 +17,10 @@ const INITIAL_ROOMS = [
 
 function HousekeepingDashboardPage() {
   const [rooms, setRooms] = useState(INITIAL_ROOMS);
+
+  useEffect(() => {
+    document.title = 'Dashboard Buồng Phòng | Sương Mai Hotel';
+  }, []);
 
   const dirtyRooms = rooms.filter((r) => r.status === 'dirty');
   const cleanRooms = rooms.filter((r) => r.status === 'clean');
@@ -36,20 +41,31 @@ function HousekeepingDashboardPage() {
     <div className="min-h-screen bg-background">
       {/* Header */}
       <header className="bg-primary text-text-on-dark border-b border-white/10">
-        <div className="max-w-6xl mx-auto px-6 py-6">
-          <p className="text-accent text-xs font-bold uppercase tracking-[0.2em]">
-            Sương Mai Hotel
-          </p>
-          <h1 className="font-headline text-3xl font-bold mt-1">
-            Dashboard Nhân Viên Buồng Phòng
-          </h1>
-          <p className="text-text-on-dark/70 text-sm mt-2">
-            Quản lý trạng thái dọn dẹp các phòng trong khách sạn
-          </p>
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <p className="text-accent text-xs font-bold uppercase tracking-[0.2em]">
+                Sương Mai Hotel
+              </p>
+              <h1 className="font-headline text-2xl sm:text-3xl font-bold mt-1">
+                Dashboard Nhân Viên Buồng Phòng
+              </h1>
+              <p className="text-text-on-dark/70 text-sm mt-2">
+                Quản lý trạng thái dọn dẹp các phòng trong khách sạn
+              </p>
+            </div>
+            <Link
+              to="/"
+              className="inline-flex items-center gap-2 rounded-xl border border-white/20 px-3 sm:px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-white/10 shrink-0"
+            >
+              <span className="material-symbols-outlined text-[18px]">arrow_back</span>
+              <span className="hidden sm:inline">Về trang chủ</span>
+            </Link>
+          </div>
         </div>
       </header>
 
-      <main className="max-w-6xl mx-auto px-6 py-8 space-y-8">
+      <main className="max-w-6xl mx-auto px-4 sm:px-6 py-8 space-y-8">
         {/* Stat cards */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div className="bg-surface rounded-2xl border border-border-custom shadow-sm p-6">
