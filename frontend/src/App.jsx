@@ -17,11 +17,41 @@ import RevenueDashboardPage from './pages/RevenueDashboardPage/RevenueDashboardP
 import CheckInPage from './pages/CheckInPage/CheckInPage';
 import BookingPage from './pages/BookingPage/BookingPage';
 import './auth/auth.css';
+import { useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
+
+function PageTitleUpdater() {
+  const { pathname } = useLocation();
+
+  useEffect(() => {
+    const titles = {
+      '/': 'Trang chủ',
+      '/dang-nhap': 'Đăng nhập',
+      '/dang-ky': 'Đăng ký',
+      '/quen-mat-khau': 'Quên mật khẩu',
+      '/admin/revenue': 'Báo cáo doanh thu',
+      '/admin/price-lists': 'Quản lý bảng giá',
+      '/admin/checkout': 'Danh sách phòng cần trả',
+      '/admin/check-in': 'Tiếp nhận Check-in',
+      '/admin/housekeeping': 'Quản lý buồng phòng',
+      '/rooms': 'Danh sách phòng',
+      '/rooms/available': 'Tra cứu phòng trống',
+      '/booking': 'Đặt phòng',
+    };
+
+    document.title = titles[pathname]
+      ? `${titles[pathname]} | Sương Mai Hotel`
+      : 'Sương Mai Hotel';
+    }, [pathname]);
+
+  return null;
+}
 
 function App() {
   return (
     <ToastProvider>
       <BrowserRouter>
+       <PageTitleUpdater />
         <Routes>
           <Route path="/system-check" element={<SystemCheckPage />} />
           <Route path="/admin/price-lists" element={<PriceListPage />} />

@@ -137,7 +137,13 @@ export default function AuthPage({ mode }) {
         storage.setItem("authUser", JSON.stringify(profile));
         otherStorage.removeItem("authUser");
 
-        navigate("/", { replace: true }); 
+        const dashboardPaths = {
+          CHU_KHACH_SAN: '/',
+          LE_TAN: '/',
+          NHAN_VIEN_BUONG: '/admin/housekeeping',
+        };
+
+        navigate(dashboardPaths[profile.role] ?? '/', { replace: true });
 
         setValues((v) => ({
           ...v,
