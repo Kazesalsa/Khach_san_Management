@@ -271,3 +271,32 @@ CREATE TABLE IF NOT EXISTS su_dung_dich_vu (
     FOREIGN KEY (dich_vu_id) REFERENCES dich_vu(id) ON DELETE RESTRICT,
     FOREIGN KEY (nhan_vien_ghi_nhan_id) REFERENCES nhan_vien(ma_nhan_vien) ON DELETE RESTRICT
 );
+
+-- Mỗi dòng của view tương ứng với một booking detail đã có hóa đơn.
+-- Doanh thu chỉ ghi nhận khi hóa đơn đã thanh toán/chốt.
+CREATE UNIQUE INDEX IF NOT EXISTS uq_chi_tiet_dat_phong_hoa_don
+    ON chi_tiet_dat_phong (hoa_don_id)
+    WHERE hoa_don_id IS NOT NULL;
+
+CREATE INDEX IF NOT EXISTS idx_hoa_don_revenue_date_status
+    ON hoa_don (thoi_gian_chot, trang_thai);
+
+CREATE INDEX IF NOT EXISTS idx_phong_room_category
+    ON phong (ma_loai_phong);
+
+CREATE OR REPLACE VIEW v_revenue_detail AS
+SELECT
+    hd.id AS invoice_id,
+    ct.id AS booking_detail_id,
+    hd.thoi_gian_chot AS revenue_at,
+    hd.trang_thai AS invoice_status,
+    lp.id AS room_category_id,
+    lp.ten AS room_category_name,
+    hd.tien_phong AS room_revenue,
+    hd.tien_dich_vu AS service_revenue,
+    hd.tong_tien AS total_revenue
+FROM hoa_don hd
+JOIN chi_tiet_dat_phong ct ON ct.hoa_don_id = hd.id
+JOIN phong p ON p.id = ct.phong_id
+JOIN loai_phong lp ON lp.id = p.ma_loai_phong
+WHERE hd.trang_thai IN ('DA_THANH_TOAN', 'DA_CHOT');
