@@ -24,6 +24,7 @@ const Header = () => {
 
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [accountMenuOpen, setAccountMenuOpen] = useState(false);
+  const [dashboardSubmenuOpen, setDashboardSubmenuOpen] = useState(false);
   const [user, setUser] = useState(() => getStoredUser());
   const [logoutConfirmOpen, setLogoutConfirmOpen] = useState(false);
   const [logoutNotice, setLogoutNotice] = useState(false);
@@ -259,19 +260,115 @@ const Header = () => {
                           Trang cá nhân
                         </button>
 
-                        <button
-                          type="button"
-                          onClick={() =>
-                            setAccountMenuOpen(false)
-                          }
-                          className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm font-medium text-text-primary transition-colors hover:bg-surface-alt hover:text-primary"
+                        <div
+                          onMouseEnter={() => {
+                            if (['CHU_KHACH_SAN', 'LE_TAN'].includes(user.role)) {
+                              setDashboardSubmenuOpen(true);
+                            }
+                          }}
+                          onMouseLeave={() => setDashboardSubmenuOpen(false)}
                         >
-                          <span className="material-symbols-outlined text-[18px] text-text-secondary">
-                            dashboard
-                          </span>
+                          <button
+                            type="button"
+                            aria-expanded={dashboardSubmenuOpen}
+                            onClick={() => {
+                              if (['CHU_KHACH_SAN', 'LE_TAN'].includes(user.role)) {
+                                setDashboardSubmenuOpen(true);
+                                return;
+                              }
 
-                          Bảng điều khiển
-                        </button>
+                              setAccountMenuOpen(false);
+
+                              if (user.role === 'NHAN_VIEN_BUONG') {
+                                navigate('/admin/housekeeping');
+                              } else {
+                                navigate('/');
+                              }
+                            }}
+                            className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm font-medium text-text-primary transition-colors hover:bg-surface-alt hover:text-primary"
+                          >
+                            <span className="material-symbols-outlined text-[18px] text-text-secondary">
+                              dashboard
+                            </span>
+
+                            <span className="flex-1">Bảng điều khiển</span>
+
+                            {['CHU_KHACH_SAN', 'LE_TAN'].includes(user.role) && (
+                              <span className="material-symbols-outlined text-[18px]">
+                                expand_more
+                              </span>
+                            )}
+                          </button>
+
+                          {dashboardSubmenuOpen && (
+                            <div className="border-t border-border-custom bg-surface-alt/50 px-2 py-1">
+
+                              {user.role === 'CHU_KHACH_SAN' && (
+                                <>
+                                  <Link
+                                    to="/admin/revenue"
+                                    onClick={() => {
+                                      setDashboardSubmenuOpen(false);
+                                      setAccountMenuOpen(false);
+                                    }}
+                                    className="flex items-center gap-3 rounded-lg px-4 py-2.5 text-sm text-text-primary hover:bg-surface-alt hover:text-primary"
+                                  >
+                                    <span className="material-symbols-outlined text-[18px]">
+                                      bar_chart
+                                    </span>
+                                    Báo cáo doanh thu
+                                  </Link>
+
+                                  <Link
+                                    to="/admin/price-lists"
+                                    onClick={() => {
+                                      setDashboardSubmenuOpen(false);
+                                      setAccountMenuOpen(false);
+                                    }}
+                                    className="flex items-center gap-3 rounded-lg px-4 py-2.5 text-sm text-text-primary hover:bg-surface-alt hover:text-primary"
+                                  >
+                                    <span className="material-symbols-outlined text-[18px]">
+                                      sell
+                                    </span>
+                                    Quản lý bảng giá
+                                  </Link>
+                                </>
+                              )}
+
+                              {user.role === 'LE_TAN' && (
+                                <>
+                                  <Link
+                                    to="/admin/check-in"
+                                    onClick={() => {
+                                      setDashboardSubmenuOpen(false);
+                                      setAccountMenuOpen(false);
+                                    }}
+                                    className="flex items-center gap-3 rounded-lg px-4 py-2.5 text-sm text-text-primary hover:bg-surface-alt hover:text-primary"
+                                  >
+                                    <span className="material-symbols-outlined text-[18px]">
+                                      login
+                                    </span>
+                                    Check-in
+                                  </Link>
+
+                                  <Link
+                                    to="/admin/checkout"
+                                    onClick={() => {
+                                      setDashboardSubmenuOpen(false);
+                                      setAccountMenuOpen(false);
+                                    }}
+                                    className="flex items-center gap-3 rounded-lg px-4 py-2.5 text-sm text-text-primary hover:bg-surface-alt hover:text-primary"
+                                  >
+                                    <span className="material-symbols-outlined text-[18px]">
+                                      logout
+                                    </span>
+                                    Check-out
+                                  </Link>
+                                </>
+                              )}
+                            </div>
+                          )}
+                        </div>
                       </div>
 
                       {/* Logout */}
