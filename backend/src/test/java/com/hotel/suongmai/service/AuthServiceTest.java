@@ -32,7 +32,6 @@ import com.hotel.suongmai.entity.TrangThaiTaiKhoan;
 import com.hotel.suongmai.entity.VaiTro;
 import com.hotel.suongmai.exception.EmailAlreadyExistsException;
 import com.hotel.suongmai.exception.PasswordConfirmationException;
-import com.hotel.suongmai.exception.ProfileNotFoundException;
 import com.hotel.suongmai.repository.KhachHangRepository;
 import com.hotel.suongmai.repository.NhanVienRepository;
 import com.hotel.suongmai.repository.TaiKhoanRepository;
@@ -132,6 +131,14 @@ class AuthServiceTest {
         assertThat(savedAccount.getTrangThai()).isEqualTo(TrangThaiTaiKhoan.HOAT_DONG);
         assertThat(response.accountId()).isEqualTo("account-new");
         assertThat(response.email()).isEqualTo("customer@example.com");
+
+        ArgumentCaptor<KhachHang> customerCaptor = ArgumentCaptor.forClass(KhachHang.class);
+        verify(khachHangRepository).save(customerCaptor.capture());
+        KhachHang savedCustomer = customerCaptor.getValue();
+        assertThat(savedCustomer.getTaiKhoan()).isSameAs(savedAccount);
+        assertThat(savedCustomer.getHoTen()).isEqualTo("Khách hàng");
+        assertThat(savedCustomer.getEmail()).isEqualTo("customer@example.com");
+        assertThat(savedCustomer.getSoDienThoai()).isNull();
         verify(passwordEncoder).encode("password123");
     }
 
@@ -206,14 +213,18 @@ class AuthServiceTest {
     }
 
     @Test
-    void throwsNotFoundWhenProfileDoesNotExist() {
+    void returnsBasicCustomerProfileForLegacyAccountWithoutCustomerRecord() {
         TaiKhoan account = account("account-missing", "customer", VaiTro.KHACH_HANG);
         when(khachHangRepository.findByTaiKhoanId("account-missing"))
                 .thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> authService.getProfile(new TaiKhoanDetails(account)))
-                .isInstanceOf(ProfileNotFoundException.class)
-                .hasMessage("Không tìm thấy hồ sơ khách hàng của tài khoản");
+        ProfileResponse response = authService.getProfile(new TaiKhoanDetails(account));
+
+        assertThat(response.accountId()).isEqualTo("account-missing");
+        assertThat(response.profileType()).isEqualTo("CUSTOMER");
+        assertThat(response.profileId()).isNull();
+        assertThat(response.fullName()).isEqualTo("Khách hàng");
+        assertThat(response.email()).isEqualTo("customer");
     }
 
     private TaiKhoan account(String id, String username, VaiTro role) {
