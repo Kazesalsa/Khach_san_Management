@@ -17,16 +17,15 @@ public interface RoomRepository extends JpaRepository<Room, String> {
     Optional<Room> findByRoomCode(String roomCode);
     List<Room> findByUsageStatusAndCleaningStatus(UsageStatus usageStatus, CleaningStatus cleaningStatus);
 
-    @Query("SELECT r FROM Room r " +
+    @Query(value = "SELECT r.* FROM phong r " +
             "WHERE NOT EXISTS ( " +
-            "SELECT 1 FROM BookingDetail bd " +
-            "WHERE bd.room = r " +
-            "AND :toDate > bd.expectedCheckInDate " +
-            "AND :fromDate < bd.expectedCheckOutDate " +
-            "AND bd.booking.status IN (" +
-            "com.hotel.suongmai.entity.BookingStatus.CHO_XAC_NHAN, " +
-            "com.hotel.suongmai.entity.BookingStatus.DA_DAT, " +
-            "com.hotel.suongmai.entity.BookingStatus.DA_NHAN))")
+            "    SELECT 1 FROM chi_tiet_dat_phong bd " +
+            "    JOIN phieu_dat_phong pdp ON pdp.id = bd.phieu_dat_phong_id " +
+            "    WHERE bd.phong_id = r.id " +
+            "    AND :toDate > bd.ngay_nhan_du_kien " +
+            "    AND :fromDate < bd.ngay_tra_du_kien " +
+            "    AND CAST(pdp.trang_thai AS VARCHAR) IN ('CHO_XAC_NHAN', 'DA_DAT', 'DA_NHAN') " +
+            ")", nativeQuery = true)
     List<Room> findAvailableRooms(
             @Param("fromDate") LocalDate fromDate,
             @Param("toDate") LocalDate toDate

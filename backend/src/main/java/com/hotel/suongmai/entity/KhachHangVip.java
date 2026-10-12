@@ -6,6 +6,7 @@ import lombok.EqualsAndHashCode;
 
 @Entity
 @Table(name = "khach_hang_vip")
+@PrimaryKeyJoinColumn(name = "khach_hang_id")
 @Data
 @EqualsAndHashCode(callSuper = true)
 public class KhachHangVip extends KhachHang {

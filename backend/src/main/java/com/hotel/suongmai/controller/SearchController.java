@@ -17,6 +17,8 @@ import org.springframework.web.bind.annotation.RestController;
 import java.time.LocalDate;
 import java.util.List;
 
+import org.springframework.transaction.annotation.Transactional;
+
 @Slf4j
 @RestController
 @RequestMapping("/api/rooms")
@@ -30,13 +32,21 @@ public class SearchController {
 
     private final RoomService roomService;
 
+    @Transactional(readOnly = true)
     @GetMapping("/available")
     public ResponseEntity<?> findAvailableRooms(
-            @RequestParam(name = "from_date")
-            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fromDate,
-            @RequestParam(name = "to_date")
-            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate toDate) {
-        if (!fromDate.isBefore(toDate)) {
+            @RequestParam(name = "from_date", required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fromDateParam,
+            @RequestParam(name = "to_date", required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate toDateParam,
+            @RequestParam(name = "checkIn", required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate checkInParam,
+            @RequestParam(name = "checkOut", required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate checkOutParam) {
+        LocalDate fromDate = fromDateParam != null ? fromDateParam : checkInParam;
+        LocalDate toDate = toDateParam != null ? toDateParam : checkOutParam;
+
+        if (fromDate == null || toDate == null || !fromDate.isBefore(toDate)) {
             return ResponseEntity.badRequest()
                     .body(new RoomErrorResponse(INVALID_DATE_RANGE_MESSAGE));
         }
@@ -55,11 +65,13 @@ public class SearchController {
     }
 
     private static AvailableRoomResponse toResponse(Room room) {
+        String categoryName = room.getRoomCategory() != null ? room.getRoomCategory().getName() : "Tiêu chuẩn";
+        Integer capacity = room.getRoomCategory() != null ? room.getRoomCategory().getMaxCapacity() : 2;
         return new AvailableRoomResponse(
                 room.getId(),
                 room.getRoomNumber(),
-                room.getRoomCategory().getName(),
-                room.getRoomCategory().getMaxCapacity(),
+                categoryName,
+                capacity,
                 null);
     }
 }
