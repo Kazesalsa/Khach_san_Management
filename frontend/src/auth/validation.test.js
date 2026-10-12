@@ -43,7 +43,7 @@ test("register accepts matching eight-character password and trimmed email", () 
   );
 });
 
-test("login requires username", () => {
+test("login requires username or email", () => {
   const errors = validate(
     {
       username: "",
@@ -54,7 +54,7 @@ test("login requires username", () => {
     "login",
   );
 
-  assert.equal(errors.username, "Vui lòng nhập tên đăng nhập.");
+  assert.equal(errors.username, "Vui lòng nhập tên đăng nhập hoặc email.");
 });
 
 test("login requires password", () => {
@@ -139,4 +139,18 @@ test("changing original password invalidates previous confirmation", () => {
       "register",
     ).confirm,
   );
+});
+
+test("login accepts email as username", () => {
+  const errors = validate(
+    {
+      username: "khach@example.com",
+      email: "",
+      password: "password123",
+      confirm: "",
+    },
+    "login",
+  );
+
+  assert.deepEqual(errors, {});
 });
