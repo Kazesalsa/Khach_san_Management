@@ -3,7 +3,7 @@ export function validate(values, mode) {
 
   if (mode === "login") {
     if (!values.username?.trim()) {
-      errors.username = "Vui lòng nhập tên đăng nhập.";
+      errors.username = "Vui lòng nhập tên đăng nhập hoặc email.";
     }
   } else {
     if (!values.email?.trim()) {

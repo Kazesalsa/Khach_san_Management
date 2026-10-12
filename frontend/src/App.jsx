@@ -14,6 +14,7 @@ import HousekeepingDashboardPage from './pages/HousekeepingDashboardPage/Houseke
 import RoomAvailabilityPage from './pages/RoomAvailabilityPage/RoomAvailabilityPage';
 import CheckoutListPage from './pages/CheckoutListPage/CheckoutListPage';
 import RevenueDashboardPage from './pages/RevenueDashboardPage/RevenueDashboardPage';
+import CheckInPage from './pages/CheckInPage/CheckInPage';
 import BookingPage from './pages/BookingPage/BookingPage';
 import './auth/auth.css';
 import { useEffect } from 'react';
@@ -56,9 +57,9 @@ function App() {
           <Route path="/admin/price-lists" element={<PriceListPage />} />
           <Route path="/admin/housekeeping" element={<HousekeepingDashboardPage />} />
           <Route path="/admin/revenue" element={<RevenueDashboardPage />} />
+          <Route path="/admin/check-in" element={<CheckInPage />} />
           <Route path="/rooms/available" element={<RoomAvailabilityPage />} />
           <Route path="/admin/checkout" element={<CheckoutListPage />} />
-          <Route path="/admin/revenue" element={<RevenueDashboardPage />} />
           <Route path="/booking" element={<BookingPage />} />
           <Route path="/dang-nhap" element={<AuthPage key="login" mode="login" />} />
           <Route path="/dang-ky" element={<AuthPage key="register" mode="register" />} />

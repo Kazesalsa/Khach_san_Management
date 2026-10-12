@@ -175,7 +175,7 @@ export default function AuthPage({ mode }) {
       const status = error.response?.status;
 
       if (status === 401) {
-        notify("Tên đăng nhập hoặc mật khẩu không đúng.", "error");
+        notify("Tên đăng nhập/email hoặc mật khẩu không đúng.", "error");
       } else if (status === 403) {
         notify("Tài khoản đã bị khóa hoặc không có quyền đăng nhập.", "error");
       } else if (!error.response) {
@@ -308,8 +308,8 @@ export default function AuthPage({ mode }) {
                 <div className="my-6 flex items-center gap-4 text-[11px] text-text-secondary/70">
                   <span className="h-px flex-1 bg-border-custom" />
                   {mode === "login"
-                    ? "hoặc tiếp tục với tên đăng nhập"
-                    : "hoặc tiếp tục với email"}
+                  ? "hoặc tiếp tục với tên đăng nhập hoặc email"
+                  : "hoặc tiếp tục với email"}
                   <span className="h-px flex-1 bg-border-custom" />
                 </div>
               </>
@@ -323,8 +323,8 @@ export default function AuthPage({ mode }) {
               className="space-y-5"
             >
               {mode === "login"
-              ? field("username", "Tên đăng nhập", "username")
-              : field("email", "Email", "email")}
+                ? field("username", "Tên đăng nhập hoặc email", "username")
+                : field("email", "Email", "email")}
 
               {mode !== "forgot" &&
                 field(
