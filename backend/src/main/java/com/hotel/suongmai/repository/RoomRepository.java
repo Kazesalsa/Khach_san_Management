@@ -17,7 +17,7 @@ public interface RoomRepository extends JpaRepository<Room, String> {
     Optional<Room> findByRoomCode(String roomCode);
     List<Room> findByUsageStatusAndCleaningStatus(UsageStatus usageStatus, CleaningStatus cleaningStatus);
 
-    @Query("SELECT r FROM Room r " +
+    @Query("SELECT r FROM Room r JOIN FETCH r.roomCategory " +
             "WHERE NOT EXISTS ( " +
             "SELECT 1 FROM BookingDetail bd " +
             "WHERE bd.room = r " +

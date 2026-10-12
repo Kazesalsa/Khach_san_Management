@@ -5,7 +5,7 @@ import DatePicker from '../../components/ui/DatePicker';
 import Badge from '../../components/ui/Badge';
 import Button from '../../components/ui/Button';
 
-const API_BASE = '/api';
+const API_BASE = import.meta.env.VITE_API_URL || '/api';
 
 // Định dạng ngày về yyyy-MM-dd để gửi lên API
 const toDateString = (date) => date;

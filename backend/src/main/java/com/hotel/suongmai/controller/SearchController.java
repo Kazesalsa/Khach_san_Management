@@ -55,11 +55,13 @@ public class SearchController {
     }
 
     private static AvailableRoomResponse toResponse(Room room) {
+        String categoryName = room.getRoomCategory() != null ? room.getRoomCategory().getName() : "Tiêu chuẩn";
+        Integer capacity = room.getRoomCategory() != null ? room.getRoomCategory().getMaxCapacity() : 2;
         return new AvailableRoomResponse(
                 room.getId(),
                 room.getRoomNumber(),
-                room.getRoomCategory().getName(),
-                room.getRoomCategory().getMaxCapacity(),
+                categoryName,
+                capacity,
                 null);
     }
 }
