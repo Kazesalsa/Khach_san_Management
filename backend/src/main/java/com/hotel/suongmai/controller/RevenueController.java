@@ -16,7 +16,7 @@ import java.time.LocalDate;
 @RestController
 @RequestMapping("/api/revenue")
 @RequiredArgsConstructor
-@PreAuthorize("hasAnyRole('CHU_KHACH_SAN', 'ADMIN')")
+@PreAuthorize("hasRole('CHU_KHACH_SAN')")
 public class RevenueController {
 
     private final RevenueService revenueService;

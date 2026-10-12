@@ -20,7 +20,6 @@ import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.Import;
 import org.springframework.dao.DataAccessResourceFailureException;
-import org.springframework.security.core.userdetails.User;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.math.BigDecimal;
@@ -105,8 +104,8 @@ class RevenueControllerSecurityTest {
     }
 
     @Test
-    void adminRoleCanGetRevenueReport() throws Exception {
-        authenticateAdmin("admin-token", "admin");
+    void adminAccountWithHotelOwnerRoleCanGetRevenueReport() throws Exception {
+        authenticate("admin-token", "admin", VaiTro.CHU_KHACH_SAN);
         when(revenueService.getRevenueReport(
                 LocalDate.of(2026, 10, 1),
                 LocalDate.of(2026, 10, 31),
@@ -225,13 +224,4 @@ class RevenueControllerSecurityTest {
                 .thenReturn(new TaiKhoanDetails(account));
     }
 
-    private void authenticateAdmin(String token, String username) {
-        when(jwtTokenProvider.validateToken(token)).thenReturn(true);
-        when(jwtTokenProvider.getUsernameFromJwt(token)).thenReturn(username);
-        when(taiKhoanDetailsService.loadUserByUsername(username))
-                .thenReturn(User.withUsername(username)
-                        .password("encoded-password")
-                        .roles("ADMIN")
-                        .build());
-    }
 }
