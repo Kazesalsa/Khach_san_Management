@@ -10,14 +10,20 @@ const RoomSearchBar = () => {
 
   const [checkIn, setCheckIn] = useState(today);
   const [checkOut, setCheckOut] = useState(tomorrow);
+  const [adults, setAdults] = useState('2');
+  const [children, setChildren] = useState('0');
+  const [category, setCategory] = useState('all');
 
   const handleSearchRoom = (e) => {
     e.preventDefault();
-    if (checkIn && checkOut) {
-      navigate(`/rooms/available?checkIn=${encodeURIComponent(checkIn)}&checkOut=${encodeURIComponent(checkOut)}`);
-    } else {
-      navigate('/rooms/available');
-    }
+    const params = new URLSearchParams();
+    if (checkIn) params.set('checkIn', checkIn);
+    if (checkOut) params.set('checkOut', checkOut);
+    if (adults) params.set('adults', adults);
+    if (children && children !== '0') params.set('children', children);
+    if (category && category !== 'all') params.set('category', category);
+
+    navigate(`/rooms?${params.toString()}`);
   };
 
   return (
@@ -79,7 +85,12 @@ const RoomSearchBar = () => {
               <div className="grid grid-cols-2 gap-2 bg-background border border-border-custom rounded-xl p-2.5">
                 <div className="flex flex-col">
                   <span className="text-[9px] uppercase text-text-secondary font-bold px-1">Lớn</span>
-                  <select className="bg-transparent text-text-primary text-xs font-semibold focus:outline-none focus:ring-0 border-0 p-1 cursor-pointer" id="adults-count" defaultValue="2">
+                  <select 
+                    className="bg-transparent text-text-primary text-xs font-semibold focus:outline-none focus:ring-0 border-0 p-1 cursor-pointer" 
+                    id="adults-count" 
+                    value={adults}
+                    onChange={(e) => setAdults(e.target.value)}
+                  >
                     <option value="1">1 khách</option>
                     <option value="2">2 khách</option>
                     <option value="3">3 khách</option>
@@ -88,7 +99,12 @@ const RoomSearchBar = () => {
                 </div>
                 <div className="flex flex-col border-l border-border-custom pl-2">
                   <span className="text-[9px] uppercase text-text-secondary font-bold px-1">Trẻ em</span>
-                  <select className="bg-transparent text-text-primary text-xs font-semibold focus:outline-none focus:ring-0 border-0 p-1 cursor-pointer" id="children-count" defaultValue="0">
+                  <select 
+                    className="bg-transparent text-text-primary text-xs font-semibold focus:outline-none focus:ring-0 border-0 p-1 cursor-pointer" 
+                    id="children-count" 
+                    value={children}
+                    onChange={(e) => setChildren(e.target.value)}
+                  >
                     <option value="0">0 bé</option>
                     <option value="1">1 bé</option>
                     <option value="2">2 bé</option>
@@ -104,7 +120,12 @@ const RoomSearchBar = () => {
                 Hạng phòng
               </label>
               <div className="bg-background border border-border-custom rounded-xl p-3.5 hover:border-accent/50 focus-within:border-accent focus-within:ring-1 focus-within:ring-accent transition-all flex items-center h-[62px]">
-                <select className="w-full bg-transparent text-text-primary text-sm font-semibold focus:outline-none focus:ring-0 border-0 p-0 cursor-pointer" id="room-type-select" defaultValue="all">
+                <select 
+                  className="w-full bg-transparent text-text-primary text-sm font-semibold focus:outline-none focus:ring-0 border-0 p-0 cursor-pointer" 
+                  id="room-type-select" 
+                  value={category}
+                  onChange={(e) => setCategory(e.target.value)}
+                >
                   <option value="all">Tất cả hạng phòng</option>
                   <option value="deluxe">Deluxe Ban công</option>
                   <option value="premier">Premier Suite</option>

@@ -309,7 +309,7 @@ const Header = () => {
 
             {/* Direct Booking CTA */}
             <Link
-              to="/rooms/available"
+              to="/rooms"
               className="hidden sm:flex bg-accent text-primary hover:bg-accent-hover font-semibold text-xs px-3.5 sm:px-4 py-2 sm:py-2.5 rounded-lg shadow-md hover:shadow-lg transition-all tracking-wide items-center justify-center shrink-0"
             >
               Đặt phòng ngay
