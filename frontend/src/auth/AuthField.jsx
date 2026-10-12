@@ -38,7 +38,7 @@ export default function AuthField({
     : isEmail
       ? "ban@email.com"
       : isUsername
-        ? "Nhập tên đăng nhập"
+        ? "Nhập tên đăng nhập hoặc email"
         : "";
 
   return (
