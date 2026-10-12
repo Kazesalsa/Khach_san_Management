@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useSearchParams, Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Input } from '../../components/ui/Input';
@@ -111,6 +111,10 @@ function BookingSuccessModal({ isOpen, onClose, bookingRef, guestName, email, ch
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
 export default function BookingPage() {
+  useEffect(() => {
+    document.title = 'Xác Nhận Đặt Phòng | Sương Mai Hotel';
+  }, []);
+
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
 
