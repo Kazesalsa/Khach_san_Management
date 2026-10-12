@@ -28,6 +28,7 @@ function App() {
           <Route path="/admin/revenue" element={<RevenueDashboardPage />} />
           <Route path="/rooms/available" element={<RoomAvailabilityPage />} />
           <Route path="/admin/checkout" element={<CheckoutListPage />} />
+          <Route path="/admin/revenue" element={<RevenueDashboardPage />} />
           <Route path="/booking" element={<BookingPage />} />
           <Route path="/dang-nhap" element={<AuthPage key="login" mode="login" />} />
           <Route path="/dang-ky" element={<AuthPage key="register" mode="register" />} />
