@@ -1,5 +1,5 @@
-import React, { useState, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useMemo, useEffect } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ROOMS_DATA } from '../../data/roomsData';
 import Breadcrumb from '../../components/ui/Breadcrumb';
@@ -16,15 +16,39 @@ import BookingConfirmModal from '../../components/Rooms/BookingConfirmModal';
 
 const RoomsPage = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+
+  // Đọc các tham số tìm kiếm từ URL
+  const paramCheckIn = searchParams.get('checkIn') || '';
+  const paramCheckOut = searchParams.get('checkOut') || '';
+  const paramAdults = searchParams.get('adults') || searchParams.get('guests') || '';
+  const paramChildren = searchParams.get('children') || '0';
+  const paramCategory = searchParams.get('category') || 'all';
+
+  const initialGuestsFilter = useMemo(() => {
+    if (!paramAdults) return 'all';
+    const total = Number(paramAdults) + Number(paramChildren || 0);
+    if (total === 1) return '1';
+    if (total === 2) return '2';
+    if (total === 3 || total === 4) return '3-4';
+    if (total >= 5) return '5+';
+    return 'all';
+  }, [paramAdults, paramChildren]);
 
   // Filter & Search States
-  const [selectedCategory, setSelectedCategory] = useState('all');
+  const [selectedCategory, setSelectedCategory] = useState(paramCategory);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedPriceRange, setSelectedPriceRange] = useState('all');
-  const [selectedGuests, setSelectedGuests] = useState('all');
+  const [selectedGuests, setSelectedGuests] = useState(initialGuestsFilter);
   const [selectedView, setSelectedView] = useState('all');
   const [selectedTub, setSelectedTub] = useState('all');
   const [selectedSort, setSelectedSort] = useState('recommended');
+
+  // Cập nhật khi tham số URL thay đổi
+  useEffect(() => {
+    if (paramCategory) setSelectedCategory(paramCategory);
+    if (initialGuestsFilter) setSelectedGuests(initialGuestsFilter);
+  }, [paramCategory, initialGuestsFilter]);
 
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
@@ -336,6 +360,9 @@ const RoomsPage = () => {
             setBookingRoom(null);
           }}
           room={bookingRoom}
+          initialCheckIn={paramCheckIn}
+          initialCheckOut={paramCheckOut}
+          initialGuests={paramAdults ? Number(paramAdults) : 2}
         />
       )}
 
