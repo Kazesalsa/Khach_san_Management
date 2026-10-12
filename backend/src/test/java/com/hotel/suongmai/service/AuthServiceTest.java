@@ -3,6 +3,7 @@ package com.hotel.suongmai.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -11,23 +12,30 @@ import java.util.Optional;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.LockedException;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 
 import com.hotel.suongmai.dto.LoginRequest;
 import com.hotel.suongmai.dto.LoginResponse;
 import com.hotel.suongmai.dto.ProfileResponse;
+import com.hotel.suongmai.dto.RegisterRequest;
+import com.hotel.suongmai.dto.RegisterResponse;
 import com.hotel.suongmai.entity.KhachHang;
 import com.hotel.suongmai.entity.NhanVien;
 import com.hotel.suongmai.entity.TaiKhoan;
 import com.hotel.suongmai.entity.TrangThaiTaiKhoan;
 import com.hotel.suongmai.entity.VaiTro;
+import com.hotel.suongmai.exception.EmailAlreadyExistsException;
+import com.hotel.suongmai.exception.PasswordConfirmationException;
 import com.hotel.suongmai.exception.ProfileNotFoundException;
 import com.hotel.suongmai.repository.KhachHangRepository;
 import com.hotel.suongmai.repository.NhanVienRepository;
+import com.hotel.suongmai.repository.TaiKhoanRepository;
 import com.hotel.suongmai.security.JwtTokenProvider;
 import com.hotel.suongmai.security.TaiKhoanDetails;
 
@@ -37,6 +45,8 @@ class AuthServiceTest {
     private JwtTokenProvider jwtTokenProvider;
     private KhachHangRepository khachHangRepository;
     private NhanVienRepository nhanVienRepository;
+    private TaiKhoanRepository taiKhoanRepository;
+    private PasswordEncoder passwordEncoder;
     private AuthService authService;
 
     @BeforeEach
@@ -45,9 +55,12 @@ class AuthServiceTest {
         jwtTokenProvider = mock(JwtTokenProvider.class);
         khachHangRepository = mock(KhachHangRepository.class);
         nhanVienRepository = mock(NhanVienRepository.class);
+        taiKhoanRepository = mock(TaiKhoanRepository.class);
+        passwordEncoder = mock(PasswordEncoder.class);
         authService = new AuthService(
                 authenticationManager, jwtTokenProvider,
-                khachHangRepository, nhanVienRepository);
+                khachHangRepository, nhanVienRepository,
+                taiKhoanRepository, passwordEncoder);
     }
 
     @Test
@@ -93,6 +106,59 @@ class AuthServiceTest {
         String seedHash = "$2a$10$/sF0Z6RLNOwWbtrvyhf.Ley.ACw/7U24CPn6w4FECbpu8CLvNEMMC";
 
         assertThat(new BCryptPasswordEncoder().matches("password", seedHash)).isTrue();
+    }
+
+    @Test
+    void registerCreatesActiveCustomerAccountWithEncodedPassword() {
+        when(taiKhoanRepository.existsByTenDangNhapIgnoreCase("customer@example.com"))
+                .thenReturn(false);
+        when(passwordEncoder.encode("password123")).thenReturn("bcrypt-hash");
+        when(taiKhoanRepository.save(org.mockito.ArgumentMatchers.any(TaiKhoan.class)))
+                .thenAnswer(invocation -> {
+                    TaiKhoan account = invocation.getArgument(0);
+                    account.setId("account-new");
+                    return account;
+                });
+
+        RegisterResponse response = authService.register(new RegisterRequest(
+                " Customer@Example.com ", "password123", "password123"));
+
+        ArgumentCaptor<TaiKhoan> accountCaptor = ArgumentCaptor.forClass(TaiKhoan.class);
+        verify(taiKhoanRepository).save(accountCaptor.capture());
+        TaiKhoan savedAccount = accountCaptor.getValue();
+        assertThat(savedAccount.getTenDangNhap()).isEqualTo("customer@example.com");
+        assertThat(savedAccount.getMatKhauHash()).isEqualTo("bcrypt-hash");
+        assertThat(savedAccount.getVaiTro()).isEqualTo(VaiTro.KHACH_HANG);
+        assertThat(savedAccount.getTrangThai()).isEqualTo(TrangThaiTaiKhoan.HOAT_DONG);
+        assertThat(response.accountId()).isEqualTo("account-new");
+        assertThat(response.email()).isEqualTo("customer@example.com");
+        verify(passwordEncoder).encode("password123");
+    }
+
+    @Test
+    void registerRejectsExistingEmail() {
+        when(taiKhoanRepository.existsByTenDangNhapIgnoreCase("customer@example.com"))
+                .thenReturn(true);
+
+        assertThatThrownBy(() -> authService.register(new RegisterRequest(
+                "customer@example.com", "password123", "password123")))
+                .isInstanceOf(EmailAlreadyExistsException.class)
+                .hasMessage("Email đã tồn tại trong hệ thống");
+
+        verify(taiKhoanRepository, never()).save(org.mockito.ArgumentMatchers.any());
+        verify(passwordEncoder, never()).encode(org.mockito.ArgumentMatchers.anyString());
+    }
+
+    @Test
+    void registerRejectsMismatchedPasswordConfirmation() {
+        assertThatThrownBy(() -> authService.register(new RegisterRequest(
+                "customer@example.com", "password123", "different-password")))
+                .isInstanceOf(PasswordConfirmationException.class)
+                .hasMessage("Mật khẩu xác nhận không khớp");
+
+        verify(taiKhoanRepository, never())
+                .existsByTenDangNhapIgnoreCase(org.mockito.ArgumentMatchers.anyString());
+        verify(taiKhoanRepository, never()).save(org.mockito.ArgumentMatchers.any());
     }
 
     @Test

@@ -18,6 +18,7 @@ public class ThanhToan {
     private String id;
 
     @Enumerated(EnumType.STRING)
+    @org.hibernate.annotations.JdbcTypeCode(org.hibernate.type.SqlTypes.NAMED_ENUM)
     @Column(name = "loai_giao_dich", nullable = false)
     private LoaiGiaoDich transactionType;
 
@@ -25,10 +26,12 @@ public class ThanhToan {
     private BigDecimal amount;
 
     @Enumerated(EnumType.STRING)
+    @org.hibernate.annotations.JdbcTypeCode(org.hibernate.type.SqlTypes.NAMED_ENUM)
     @Column(name = "phuong_thuc", nullable = false)
     private PhuongThucThanhToan paymentMethod;
 
     @Enumerated(EnumType.STRING)
+    @org.hibernate.annotations.JdbcTypeCode(org.hibernate.type.SqlTypes.NAMED_ENUM)
     @Column(name = "trang_thai", nullable = false)
     private TrangThaiThanhToan status;
 

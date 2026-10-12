@@ -12,7 +12,7 @@ function SystemCheckPage() {
       setMessage('');
       setError('');
 
-      const response = await axios.get('http://localhost:8080/api/test');
+      const response = await axios.get('/api/test');
 
       setMessage(response.data.message);
     } catch (err) {

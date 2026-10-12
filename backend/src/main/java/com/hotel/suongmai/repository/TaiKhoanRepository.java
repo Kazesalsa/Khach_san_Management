@@ -9,4 +9,6 @@ import java.util.Optional;
 @Repository
 public interface TaiKhoanRepository extends JpaRepository<TaiKhoan, String> {
     Optional<TaiKhoan> findByTenDangNhap(String tenDangNhap);
+
+    boolean existsByTenDangNhapIgnoreCase(String tenDangNhap);
 }
