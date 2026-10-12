@@ -24,7 +24,7 @@ public interface RoomRepository extends JpaRepository<Room, String> {
             "    WHERE bd.phong_id = r.id " +
             "    AND :toDate > bd.ngay_nhan_du_kien " +
             "    AND :fromDate < bd.ngay_tra_du_kien " +
-            "    AND pdp.trang_thai::text IN ('CHO_XAC_NHAN', 'DA_DAT', 'DA_NHAN') " +
+            "    AND CAST(pdp.trang_thai AS VARCHAR) IN ('CHO_XAC_NHAN', 'DA_DAT', 'DA_NHAN') " +
             ")", nativeQuery = true)
     List<Room> findAvailableRooms(
             @Param("fromDate") LocalDate fromDate,
