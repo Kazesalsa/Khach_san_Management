@@ -17,6 +17,8 @@ import org.springframework.web.bind.annotation.RestController;
 import java.time.LocalDate;
 import java.util.List;
 
+import org.springframework.transaction.annotation.Transactional;
+
 @Slf4j
 @RestController
 @RequestMapping("/api/rooms")
@@ -30,6 +32,7 @@ public class SearchController {
 
     private final RoomService roomService;
 
+    @Transactional(readOnly = true)
     @GetMapping("/available")
     public ResponseEntity<?> findAvailableRooms(
             @RequestParam(name = "from_date")
@@ -55,11 +58,13 @@ public class SearchController {
     }
 
     private static AvailableRoomResponse toResponse(Room room) {
+        String categoryName = room.getRoomCategory() != null ? room.getRoomCategory().getName() : "Tiêu chuẩn";
+        Integer capacity = room.getRoomCategory() != null ? room.getRoomCategory().getMaxCapacity() : 2;
         return new AvailableRoomResponse(
                 room.getId(),
                 room.getRoomNumber(),
-                room.getRoomCategory().getName(),
-                room.getRoomCategory().getMaxCapacity(),
+                categoryName,
+                capacity,
                 null);
     }
 }
