@@ -318,9 +318,7 @@ const Header = () => {
             {/* Mobile Menu Hamburger Button */}
             <button
               type="button"
-              onClick={() =>
-                setMobileMenuOpen(!mobileMenuOpen)
-              }
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               className="xl:hidden w-9 h-9 rounded-lg bg-surface border border-border-custom flex items-center justify-center text-text-primary"
               aria-label="Toggle menu"
             >
@@ -328,46 +326,6 @@ const Header = () => {
                 {mobileMenuOpen ? 'close' : 'menu'}
               </span>
             </button>
-            <div className="absolute right-0 top-full mt-2 w-56 bg-surface border border-border-custom rounded-xl shadow-[0_14px_34px_-4px_rgba(19,42,58,0.12)] p-2 hidden group-hover:flex flex-col z-50">
-              <div className="px-3 py-1.5 text-[10px] text-text-secondary uppercase tracking-wider font-semibold">
-                Cổng đăng nhập hệ thống
-              </div>
-              <Link
-                className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs text-text-secondary hover:bg-surface-alt hover:text-text-primary transition-colors"
-                to="/dang-nhap"
-              >
-                <span className="material-symbols-outlined text-[18px] text-accent">bed</span>
-                Khách hàng lưu trú
-              </Link>
-              <Link
-                className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs text-text-secondary hover:bg-surface-alt hover:text-text-primary transition-colors"
-                to="/dang-nhap"
-              >
-                <span className="material-symbols-outlined text-[18px] text-primary">concierge</span>
-                Lễ tân tiếp đón
-              </Link>
-              <Link
-                className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs text-text-secondary hover:bg-surface-alt hover:text-text-primary transition-colors"
-                to="/dang-nhap"
-              >
-                <span className="material-symbols-outlined text-[18px] text-text-secondary">cleaning_services</span>
-                Tổ Buồng phòng
-              </Link>
-              <Link
-                className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs text-text-secondary hover:bg-surface-alt hover:text-text-primary transition-colors"
-                to="/dang-nhap"
-              >
-                <span className="material-symbols-outlined text-[18px] text-accent">hotel</span>
-                Chủ khách sạn
-              </Link>
-              <Link
-                className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs text-text-secondary hover:bg-surface-alt hover:text-text-primary transition-colors"
-                to="/dang-nhap"
-              >
-                <span className="material-symbols-outlined text-[18px] text-danger-custom">admin_panel_settings</span>
-                Quản trị viên
-              </Link>
-            </div>
           </div>
         </div>
 
@@ -460,10 +418,41 @@ const Header = () => {
 
             <div className="pt-3 border-t border-border-custom flex items-center justify-between text-xs text-text-secondary">
               <span>Hotline: 024.3828.xxxx</span>
+              <span className="font-bold text-primary">Tiếng Việt (VI)</span>
+            </div>
 
-              <span className="font-bold text-primary">
-                Tiếng Việt (VI)
-              </span>
+            {/* Mobile: Đăng nhập + Đặt phòng */}
+            <div className="pt-3 border-t border-border-custom flex flex-col gap-2">
+              {user ? (
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-bold text-primary">{user.fullName || user.username}</span>
+                  <button
+                    type="button"
+                    onClick={() => { setMobileMenuOpen(false); setLogoutConfirmOpen(true); }}
+                    className="text-xs font-semibold text-danger-custom flex items-center gap-1"
+                  >
+                    <span className="material-symbols-outlined text-[16px]">logout</span>
+                    Đăng xuất
+                  </button>
+                </div>
+              ) : (
+                <Link
+                  to="/dang-nhap"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="flex items-center justify-center gap-2 rounded-xl border border-border-custom bg-surface px-4 py-3 text-sm font-bold text-primary transition hover:bg-surface-alt"
+                >
+                  <span className="material-symbols-outlined text-[18px]">person</span>
+                  Đăng nhập
+                </Link>
+              )}
+              <Link
+                to="/rooms/available"
+                onClick={() => setMobileMenuOpen(false)}
+                className="flex items-center justify-center gap-2 rounded-xl bg-accent px-4 py-3 text-sm font-bold text-primary transition hover:bg-accent-hover"
+              >
+                <span className="material-symbols-outlined text-[18px]">search</span>
+                Đặt phòng ngay
+              </Link>
             </div>
           </div>
         )}

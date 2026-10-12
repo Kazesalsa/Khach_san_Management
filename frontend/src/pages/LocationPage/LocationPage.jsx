@@ -40,7 +40,7 @@ export default function LocationPage() {
             </div>
 
             {/* BỐ CỤC CHÍNH */}
-            <div className="max-w-7xl mx-auto px-4 py-8 grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div className="max-w-7xl mx-auto px-4 py-8 grid grid-cols-1 md:grid-cols-[1fr_2fr] lg:grid-cols-3 gap-8">
 
                 {/* KHỐI THÔNG TIN BÊN TRÁI */}
                 <div id="info-panel" className="space-y-6 opacity-0">
