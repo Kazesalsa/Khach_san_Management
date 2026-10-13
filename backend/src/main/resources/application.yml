@@ -23,3 +23,10 @@ spring:
 
 server:
   port: 8080
+
+payos:
+  client-id: ${PAYOS_CLIENT_ID:51427319-9751-42d2-b369-28838940e205}
+  api-key: ${PAYOS_API_KEY:d975a665-079b-47a1-a269-d779e1a546d3}
+  checksum-key: ${PAYOS_CHECKSUM_KEY:eaa65f16a5dd2dd9b4e569223f28e07341055aa0a5796a3554b1ef2c0037a3bd}
+  return-url: ${PAYOS_RETURN_URL:http://localhost:5173/payment/result}
+  cancel-url: ${PAYOS_CANCEL_URL:http://localhost:5173/payment/result?cancel=true}

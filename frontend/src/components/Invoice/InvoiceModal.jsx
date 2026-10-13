@@ -2,6 +2,7 @@ import { useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Badge from '../ui/Badge';
 import Button from '../ui/Button';
+import { createCheckoutPayment, redirectToPayOS } from '../../services/paymentService';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 const formatVND = (n) =>
@@ -28,9 +29,11 @@ export default function InvoiceModal({ isOpen, onClose, room, onPaymentConfirmed
   const [tab, setTab] = useState('invoice');
 
   // Payment state
-  const [payMethod,   setPayMethod]   = useState('cash'); // 'cash' | 'transfer'
-  const [cashInput,   setCashInput]   = useState('');
-  const [payDone,     setPayDone]     = useState(false);
+  const [payMethod,      setPayMethod]      = useState('transfer'); // Default to 'transfer' (PayOS)
+  const [cashInput,      setCashInput]      = useState('');
+  const [payDone,        setPayDone]        = useState(false);
+  const [isPayOSLoading, setIsPayOSLoading] = useState(false);
+  const [payOSError,     setPayOSError]     = useState('');
 
   if (!room) return null;
 
@@ -88,6 +91,26 @@ export default function InvoiceModal({ isOpen, onClose, room, onPaymentConfirmed
       if (onPaymentConfirmed) onPaymentConfirmed(room.id);
       onClose();
     }, 2000);
+  };
+
+  const handlePayOSCheckout = async () => {
+    setIsPayOSLoading(true);
+    setPayOSError('');
+    try {
+      const res = await createCheckoutPayment({
+        bookingCode: room.bookingCode,
+        amount: remaining,
+      });
+      if (res?.checkoutUrl) {
+        redirectToPayOS(res.checkoutUrl);
+        return;
+      }
+      throw new Error('Không nhận được liên kết thanh toán từ cổng PayOS');
+    } catch (err) {
+      console.error('Lỗi PayOS checkout:', err);
+      setPayOSError(err.response?.data?.message || err.message || 'Lỗi kết nối tới cổng thanh toán PayOS');
+      setIsPayOSLoading(false);
+    }
   };
 
   const canConfirm = remaining <= 0 || (payMethod === 'cash' && cashAmount >= remaining);
@@ -378,43 +401,82 @@ export default function InvoiceModal({ isOpen, onClose, room, onPaymentConfirmed
                             </div>
                           )}
 
-                          {/* Chuyển khoản */}
+                          {/* Chuyển khoản qua Cổng PayOS */}
                           {payMethod === 'transfer' && (
-                            <div className="flex flex-col items-center gap-3 p-5 bg-surface-alt/40 rounded-xl border border-border-custom">
-                              <span className="material-symbols-outlined text-[48px] text-text-secondary/40">qr_code_2</span>
-                              <p className="text-sm font-semibold text-primary">Mã QR chuyển khoản</p>
-                              <p className="text-xs text-text-secondary text-center max-w-xs">
-                                Tính năng quét mã QR ngân hàng đang được phát triển. Vui lòng kiểm tra thủ công hoặc dùng tiền mặt.
-                              </p>
-                              <Badge variant="warning">Chức năng sắp ra mắt</Badge>
+                            <div className="flex flex-col items-center gap-3.5 p-5 bg-surface-alt/50 rounded-2xl border border-border-custom text-center">
+                              <div className="w-14 h-14 rounded-2xl bg-accent/15 flex items-center justify-center border border-accent/30 text-accent">
+                                <span className="material-symbols-outlined text-[32px]">qr_code_scanner</span>
+                              </div>
+                              <div>
+                                <p className="text-base font-bold text-primary">Cổng Thanh Toán Trực Tuyến PayOS (Dynamic VietQR)</p>
+                                <p className="text-xs text-text-secondary mt-1 max-w-sm">
+                                  Hệ thống chuyển hướng trực tiếp sang trang PayOS. Khách quét mã VietQR tự động qua ứng dụng bất kỳ ngân hàng nào, hoàn tất sẽ tự chuyển về lại hệ thống.
+                                </p>
+                              </div>
+
+                              <div className="w-full bg-background rounded-xl p-3 border border-border-custom text-xs flex justify-between items-center">
+                                <span className="text-text-secondary">Số tiền cần thanh toán:</span>
+                                <span className="font-headline text-base font-bold text-accent">{formatVND(remaining)}</span>
+                              </div>
+
+                              {payOSError && (
+                                <div className="w-full p-2.5 rounded-lg bg-rose-50 border border-rose-200 text-xs text-danger-custom text-left">
+                                  {payOSError}
+                                </div>
+                              )}
+
+                              <Button
+                                variant="primary"
+                                size="lg"
+                                fullWidth
+                                iconLeft="open_in_new"
+                                isLoading={isPayOSLoading}
+                                onClick={handlePayOSCheckout}
+                              >
+                                {isPayOSLoading ? 'Đang chuyển hướng sang PayOS…' : `Thanh toán qua Cổng PayOS (${formatVND(remaining)})`}
+                              </Button>
                             </div>
                           )}
                         </>
                       )}
 
-                      {/* Nút xác nhận */}
+                      {/* Nút xác nhận cho tiền mặt hoặc xác nhận thủ công */}
                       <div className="pt-2 space-y-2">
-                        <Button
-                          variant="secondary"
-                          size="lg"
-                          fullWidth
-                          iconLeft="check_circle"
-                          isDisabled={!canConfirm}
-                          onClick={handleConfirmPayment}
-                        >
-                          Xác nhận đã thu đủ tiền & Mở khóa trả phòng
-                        </Button>
-                        {!canConfirm && payMethod === 'cash' && cashAmount > 0 && (
-                          <p className="text-center text-[11px] text-danger-custom flex items-center justify-center gap-1">
-                            <span className="material-symbols-outlined text-[14px]">lock</span>
-                            Số tiền khách đưa chưa đủ
-                          </p>
-                        )}
-                        {!canConfirm && !cashInput && payMethod === 'cash' && (
-                          <p className="text-center text-[11px] text-text-secondary flex items-center justify-center gap-1">
-                            <span className="material-symbols-outlined text-[14px]">info</span>
-                            Nhập số tiền khách đưa để tiếp tục
-                          </p>
+                        {payMethod === 'cash' ? (
+                          <>
+                            <Button
+                              variant="secondary"
+                              size="lg"
+                              fullWidth
+                              iconLeft="check_circle"
+                              isDisabled={!canConfirm}
+                              onClick={handleConfirmPayment}
+                            >
+                              Xác nhận đã thu đủ tiền & Mở khóa trả phòng
+                            </Button>
+                            {!canConfirm && cashAmount > 0 && (
+                              <p className="text-center text-[11px] text-danger-custom flex items-center justify-center gap-1">
+                                <span className="material-symbols-outlined text-[14px]">lock</span>
+                                Số tiền khách đưa chưa đủ
+                              </p>
+                            )}
+                            {!canConfirm && !cashInput && (
+                              <p className="text-center text-[11px] text-text-secondary flex items-center justify-center gap-1">
+                                <span className="material-symbols-outlined text-[14px]">info</span>
+                                Nhập số tiền khách đưa để tiếp tục
+                              </p>
+                            )}
+                          </>
+                        ) : (
+                          <div className="text-center pt-1">
+                            <button
+                              type="button"
+                              onClick={handleConfirmPayment}
+                              className="text-xs text-text-secondary hover:text-primary underline transition-colors"
+                            >
+                              Hoặc xác nhận đã nhận tiền chuyển khoản thủ công (không qua PayOS)
+                            </button>
+                          </div>
                         )}
                       </div>
                     </>

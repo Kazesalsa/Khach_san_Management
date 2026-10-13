@@ -1,10 +1,12 @@
 import { useState, useMemo, useCallback, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import axios from 'axios';
 import Badge from '../../components/ui/Badge';
 import Button from '../../components/ui/Button';
+import { useToast } from '../../components/ui/Toast';
 import InvoiceModal from '../../components/Invoice/InvoiceModal';
+import { createCheckoutPayment, redirectToPayOS } from '../../services/paymentService';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 const formatVND = (n) =>
@@ -26,12 +28,33 @@ function CheckoutModal({ room, onClose, onConfirmed }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [done, setDone] = useState(false);
+  const [payingPayOS, setPayingPayOS] = useState(false);
 
   if (!room) return null;
 
   const remaining = room.totalAmount - room.depositPaid;
   const hasUnpaid = room.paymentStatus === 'unpaid' && remaining > 0;
   const daysLeft  = getDaysLeft(room.checkOut);
+
+  const handlePayOS = async () => {
+    setPayingPayOS(true);
+    setError('');
+    try {
+      const res = await createCheckoutPayment({
+        bookingCode: room.bookingCode,
+        amount: remaining,
+      });
+      if (res?.checkoutUrl) {
+        redirectToPayOS(res.checkoutUrl);
+        return;
+      }
+      throw new Error('Không nhận được liên kết thanh toán từ PayOS');
+    } catch (err) {
+      console.error('Lỗi PayOS checkout:', err);
+      setError(err.response?.data?.message || err.message || 'Lỗi kết nối cổng thanh toán PayOS. Vui lòng thử lại.');
+      setPayingPayOS(false);
+    }
+  };
 
   const handleConfirm = async () => {
     setBusy(true);
@@ -162,14 +185,27 @@ function CheckoutModal({ room, onClose, onConfirmed }) {
                 </div>
               </div>
 
-              {/* Cảnh báo chưa thanh toán */}
+              {/* Cảnh báo chưa thanh toán & Nút thanh toán PayOS */}
               {hasUnpaid && (
-                <div className="flex items-start gap-3 p-3.5 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-800">
-                  <span className="material-symbols-outlined text-amber-500 text-[20px] shrink-0 mt-0.5">warning</span>
-                  <div>
-                    <p className="font-bold mb-0.5">Khách chưa thanh toán đủ</p>
-                    <p>Còn <strong>{formatVND(remaining)}</strong> chưa được thu. Vui lòng thu tiền trước khi xác nhận trả phòng.</p>
+                <div className="space-y-3">
+                  <div className="flex items-start gap-3 p-3.5 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-800">
+                    <span className="material-symbols-outlined text-amber-500 text-[20px] shrink-0 mt-0.5">warning</span>
+                    <div>
+                      <p className="font-bold mb-0.5">Khách chưa thanh toán đủ</p>
+                      <p>Còn <strong>{formatVND(remaining)}</strong> chưa được thu. Vui lòng thanh toán qua cổng PayOS trước khi xác nhận trả phòng.</p>
+                    </div>
                   </div>
+
+                  <Button
+                    variant="primary"
+                    size="md"
+                    fullWidth
+                    iconLeft="qr_code_scanner"
+                    isLoading={payingPayOS}
+                    onClick={handlePayOS}
+                  >
+                    {payingPayOS ? 'Đang mở cổng PayOS…' : `Thanh toán qua PayOS (${formatVND(remaining)})`}
+                  </Button>
                 </div>
               )}
 
@@ -335,6 +371,9 @@ function RoomCard({ room, onOpenCheckout, onOpenInvoice }) {
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
 export default function CheckoutListPage() {
+  const [searchParams] = useSearchParams();
+  const { addToast } = useToast();
+
   useEffect(() => {
     document.title = 'Danh Sách Phòng Cần Trả | Sương Mai Hotel';
   }, []);
@@ -342,6 +381,28 @@ export default function CheckoutListPage() {
   const [rooms, setRooms] = useState([]);
   const [loading, setLoading] = useState(true);
   const [fetchNotice, setFetchNotice] = useState('');
+
+  useEffect(() => {
+    const status = searchParams.get('status');
+    const bookingCode = searchParams.get('bookingCode');
+    if (status === 'PAID' && bookingCode) {
+      setRooms((prev) =>
+        prev.map((r) =>
+          r.bookingCode === bookingCode
+            ? { ...r, paymentStatus: 'paid', depositPaid: r.totalAmount }
+            : r
+        )
+      );
+      if (addToast) {
+        addToast({
+          title: 'Thanh toán thành công qua PayOS',
+          message: `Mã đặt phòng ${bookingCode} đã hoàn tất thanh toán.`,
+          type: 'success',
+          duration: 5000,
+        });
+      }
+    }
+  }, [searchParams, addToast]);
   const [search,       setSearch]       = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
   const [filterFloor,  setFilterFloor]  = useState('all');
