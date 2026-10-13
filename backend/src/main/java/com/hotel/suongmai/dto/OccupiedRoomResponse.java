@@ -19,6 +19,8 @@ public record OccupiedRoomResponse(
         LocalDateTime checkInTime,
         LocalDate expectedCheckOutDate,
         Integer guestCount,
+        BigDecimal roomFee,
+        BigDecimal serviceFee,
         BigDecimal totalAmount,
         BigDecimal paidAmount,
         BigDecimal remainingAmount,

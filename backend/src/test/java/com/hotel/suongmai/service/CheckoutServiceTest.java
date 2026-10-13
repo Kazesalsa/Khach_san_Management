@@ -201,6 +201,28 @@ class CheckoutServiceTest {
     }
 
     @Test
+    @DisplayName("Check-out thành công khi chưa có hóa đơn trước đó nhưng khách đã thanh toán đủ")
+    void checkout_whenNoInvoiceYetButPaidInFull_shouldAutoCreateInvoiceAndSucceed() {
+        when(bookingRepository.findByBookingCode("BOOK001")).thenReturn(Optional.of(sampleBooking));
+        when(hoaDonRepository.findByBookingId("b-01")).thenReturn(Optional.empty());
+        when(suDungDichVuRepository.sumServiceFeeByBooking("b-01")).thenReturn(BigDecimal.ZERO);
+        // sampleBooking estimatedTotal là 2.000.000, đã thanh toán 2.000.000
+        when(thanhToanRepository.sumPaidByBooking("b-01")).thenReturn(new BigDecimal("2000000"));
+        when(nhanVienRepository.findByTaiKhoan_TenDangNhap("letan1")).thenReturn(Optional.of(sampleStaff));
+        when(bookingDetailRepository.findByBookingId("b-01")).thenReturn(List.of(sampleDetail));
+        when(hoaDonRepository.save(any(HoaDon.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        CheckoutResponse response = checkoutService.checkout("BOOK001", "letan1");
+
+        assertThat(response).isNotNull();
+        assertThat(response.bookingCode()).isEqualTo("BOOK001");
+        assertThat(sampleBooking.getStatus()).isEqualTo(BookingStatus.DA_TRA_PHONG);
+        assertThat(sampleRoom.getUsageStatus()).isEqualTo(UsageStatus.TRONG);
+        assertThat(sampleRoom.getCleaningStatus()).isEqualTo(CleaningStatus.CHUA_DON);
+        verify(hoaDonRepository, org.mockito.Mockito.atLeastOnce()).save(any(HoaDon.class));
+    }
+
+    @Test
     @DisplayName("Check-out thất bại khi chưa thanh toán đủ: ném ngoại lệ UnpaidBookingException")
     void checkout_whenUnpaid_shouldThrowUnpaidBookingException() {
         when(bookingRepository.findByBookingCode("BOOK001")).thenReturn(Optional.of(sampleBooking));

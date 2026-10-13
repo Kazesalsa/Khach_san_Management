@@ -68,12 +68,46 @@ public class CheckoutService {
         }
 
         // 1. Kiểm tra điều kiện chỉ cho trả phòng khi đã thanh toán xong
+        BigDecimal roomFee = booking.getEstimatedTotal() == null
+                ? BigDecimal.ZERO : booking.getEstimatedTotal();
+        BigDecimal serviceFee = suDungDichVuRepository.sumServiceFeeByBooking(booking.getId());
+        if (serviceFee == null) {
+            serviceFee = BigDecimal.ZERO;
+        }
+        BigDecimal totalDue = roomFee.add(serviceFee);
+        BigDecimal paid = thanhToanRepository.sumPaidByBooking(booking.getId());
+        if (paid == null) {
+            paid = BigDecimal.ZERO;
+        }
+
         HoaDon invoice = hoaDonRepository
                 .findByBookingId(booking.getId())
-                .orElseThrow(() -> new UnpaidBookingException("Booking chưa có hóa đơn"));
+                .orElse(null);
 
-        if (invoice.getStatus() != TrangThaiHoaDon.DA_THANH_TOAN && invoice.getStatus() != TrangThaiHoaDon.DA_CHOT) {
-            throw new UnpaidBookingException("Hóa đơn chưa được thanh toán đầy đủ");
+        if (invoice != null) {
+            if (invoice.getStatus() != TrangThaiHoaDon.DA_THANH_TOAN && invoice.getStatus() != TrangThaiHoaDon.DA_CHOT) {
+                if (paid.compareTo(totalDue) >= 0) {
+                    invoice.setStatus(TrangThaiHoaDon.DA_THANH_TOAN);
+                } else {
+                    throw new UnpaidBookingException("Hóa đơn chưa được thanh toán đầy đủ");
+                }
+            }
+        } else {
+            if (paid.compareTo(totalDue) < 0) {
+                throw new UnpaidBookingException("Hóa đơn chưa được thanh toán đầy đủ");
+            }
+
+            // Tự động lập hóa đơn nếu booking đã thanh toán đủ trước đó mà chưa có bản ghi hóa đơn
+            invoice = new HoaDon();
+            invoice.setInvoiceNumber(generateUniqueInvoiceNumber());
+            invoice.setBooking(booking);
+            invoice.setRoomFee(roomFee);
+            invoice.setServiceFee(serviceFee);
+            invoice.setDeductedDeposit(paid.min(totalDue));
+            invoice.setTotalAmount(totalDue);
+            invoice.setRemainingAmount(BigDecimal.ZERO);
+            invoice.setStatus(TrangThaiHoaDon.DA_THANH_TOAN);
+            invoice = hoaDonRepository.save(invoice);
         }
 
         // 2. Tìm nhân viên lễ tân thực hiện checkout
@@ -151,23 +185,25 @@ public class CheckoutService {
     private OccupiedRoomResponse toResponse(BookingDetail detail, Map<String, BigDecimal[]> moneyCache) {
         Booking booking = detail.getBooking();
 
-        // [0] = tổng cần thu, [1] = đã thu
+        // [0] = tổng cần thu, [1] = đã thu, [2] = tiền phòng, [3] = tiền dịch vụ
         BigDecimal[] money = moneyCache.computeIfAbsent(booking.getId(), id -> {
-            BigDecimal roomFee = booking.getEstimatedTotal() == null
+            BigDecimal roomFeeVal = booking.getEstimatedTotal() == null
                     ? BigDecimal.ZERO : booking.getEstimatedTotal();
-            BigDecimal serviceFee = suDungDichVuRepository.sumServiceFeeByBooking(id);
-            if (serviceFee == null) {
-                serviceFee = BigDecimal.ZERO;
+            BigDecimal serviceFeeVal = suDungDichVuRepository.sumServiceFeeByBooking(id);
+            if (serviceFeeVal == null) {
+                serviceFeeVal = BigDecimal.ZERO;
             }
-            BigDecimal paid = thanhToanRepository.sumPaidByBooking(id);
-            if (paid == null) {
-                paid = BigDecimal.ZERO;
+            BigDecimal paidVal = thanhToanRepository.sumPaidByBooking(id);
+            if (paidVal == null) {
+                paidVal = BigDecimal.ZERO;
             }
-            return new BigDecimal[] { roomFee.add(serviceFee), paid };
+            return new BigDecimal[] { roomFeeVal.add(serviceFeeVal), paidVal, roomFeeVal, serviceFeeVal };
         });
 
         BigDecimal totalDue = money[0];
         BigDecimal paid = money[1];
+        BigDecimal roomFee = money[2];
+        BigDecimal serviceFee = money[3];
         BigDecimal remaining = totalDue.subtract(paid).max(BigDecimal.ZERO);
         String paymentStatus = paid.compareTo(totalDue) >= 0 ? PAID : UNPAID;
 
@@ -196,9 +232,23 @@ public class CheckoutService {
                 detail.getActualCheckInTime(),
                 detail.getExpectedCheckOutDate(),
                 detail.getGuestCount(),
+                roomFee,
+                serviceFee,
                 totalDue,
                 paid,
                 remaining,
                 paymentStatus);
+    }
+
+    private String generateUniqueInvoiceNumber() {
+        String invoiceNumber;
+        do {
+            String randomPart = java.util.UUID.randomUUID()
+                    .toString()
+                    .replace("-", "")
+                    .substring(0, 18);
+            invoiceNumber = "HD" + randomPart;
+        } while (hoaDonRepository.existsByInvoiceNumber(invoiceNumber));
+        return invoiceNumber;
     }
 }

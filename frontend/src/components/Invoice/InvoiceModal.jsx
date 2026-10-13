@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useRef, useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import axios from 'axios';
 import Badge from '../ui/Badge';
@@ -15,13 +15,6 @@ const formatDate = (s) => {
   return d.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' });
 };
 
-const MOCK_SERVICES = [
-  { id: 1, name: 'Buffet sáng (2 khách × 2 ngày)', quantity: 4, unitPrice: 0,      total: 0,       included: true },
-  { id: 2, name: 'Dịch vụ giặt là',                quantity: 1, unitPrice: 150000, total: 150000,  included: false },
-  { id: 3, name: 'Minibar - Nước suối & Snack',    quantity: 3, unitPrice: 45000,  total: 135000,  included: false },
-  { id: 4, name: 'Dịch vụ Spa - Gói thư giãn 60p', quantity: 1, unitPrice: 450000, total: 450000, included: false },
-];
-
 // ─── InvoiceModal ─────────────────────────────────────────────────────────────
 export default function InvoiceModal({ isOpen, onClose, room, onPaymentConfirmed }) {
   const printRef = useRef(null);
@@ -29,23 +22,46 @@ export default function InvoiceModal({ isOpen, onClose, room, onPaymentConfirmed
   // Tab: 'invoice' | 'payment'
   const [tab, setTab] = useState('invoice');
 
+  // Backend preview data
+  const [invoiceData, setInvoiceData] = useState(null);
+  const [loadingInvoice, setLoadingInvoice] = useState(false);
+
   // Payment state
-  const [payMethod,      setPayMethod]      = useState('transfer'); // Default to 'transfer' (PayOS)
+  const [payMethod,      setPayMethod]      = useState('transfer');
   const [cashInput,      setCashInput]      = useState('');
   const [payDone,        setPayDone]        = useState(false);
   const [isPayOSLoading, setIsPayOSLoading] = useState(false);
   const [isCashLoading,  setIsCashLoading]  = useState(false);
   const [payOSError,     setPayOSError]     = useState('');
 
+  useEffect(() => {
+    let isMounted = true;
+    if (!room?.bookingCode) return;
+    setLoadingInvoice(true);
+    const token = localStorage.getItem('authToken') || sessionStorage.getItem('authToken');
+    axios.get(`/api/bookings/${room.bookingCode}/invoice/preview`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    })
+    .then((res) => {
+      if (isMounted) setInvoiceData(res.data);
+    })
+    .catch((err) => {
+      console.warn('Không tải được invoice preview từ server:', err);
+    })
+    .finally(() => {
+      if (isMounted) setLoadingInvoice(false);
+    });
+    return () => { isMounted = false; };
+  }, [room?.bookingCode]);
+
   if (!room) return null;
 
-  const services      = MOCK_SERVICES;
-  const extraServices = services.filter((s) => !s.included);
-  const extraTotal    = extraServices.reduce((sum, s) => sum + s.total, 0);
-  const roomTotal     = room.totalAmount;
-  const grandTotal    = roomTotal + extraTotal;
-  const alreadyPaid   = room.depositPaid;
-  const remaining     = grandTotal - alreadyPaid;
+  const roomTotal   = Number(invoiceData?.roomFee ?? room.roomFee ?? room.totalAmount ?? 0);
+  const extraTotal  = Number(invoiceData?.serviceFee ?? room.serviceFee ?? 0);
+  const grandTotal  = Number(invoiceData?.subtotal ?? (roomTotal + extraTotal));
+  const alreadyPaid = Number(invoiceData?.depositDeducted ?? room.depositPaid ?? 0);
+  const remaining   = Math.max(Number(invoiceData?.remainingAmount ?? (grandTotal - alreadyPaid)), 0);
+  const services    = invoiceData?.serviceCharges || [];
 
   // Tiền thừa
   const cashAmount  = Number(cashInput.replace(/\D/g, '')) || 0;
@@ -158,12 +174,12 @@ export default function InvoiceModal({ isOpen, onClose, room, onPaymentConfirmed
               </div>
               <div className="flex items-center gap-2">
                 {tab === 'invoice' && (
-                  <Button variant="outline" size="sm" iconLeft="print" onClick={handlePrint}>
+                  <Button variant="outline" size="sm" onClick={handlePrint}>
                     In hóa đơn
                   </Button>
                 )}
                 <button onClick={onClose} className="w-8 h-8 rounded-lg bg-surface-alt hover:bg-border-custom flex items-center justify-center text-text-secondary hover:text-primary transition-colors">
-                  <span className="material-symbols-outlined text-[20px]">close</span>
+                  <span className="font-bold text-base leading-none">✕</span>
                 </button>
               </div>
             </div>
@@ -171,9 +187,9 @@ export default function InvoiceModal({ isOpen, onClose, room, onPaymentConfirmed
             {/* Tab bar */}
             <div className="flex border-b border-border-custom">
               {[
-                { key: 'invoice', label: 'Bảng kê hóa đơn', icon: 'receipt_long' },
-                { key: 'payment', label: 'Thanh toán',       icon: 'payments' },
-              ].map(({ key, label, icon }) => (
+                { key: 'invoice', label: 'Bảng kê hóa đơn' },
+                { key: 'payment', label: 'Thanh toán' },
+              ].map(({ key, label }) => (
                 <button
                   key={key}
                   onClick={() => setTab(key)}
@@ -183,7 +199,6 @@ export default function InvoiceModal({ isOpen, onClose, room, onPaymentConfirmed
                       : 'border-transparent text-text-secondary hover:text-primary hover:bg-surface-alt'
                   }`}
                 >
-                  <span className="material-symbols-outlined text-[18px]">{icon}</span>
                   {label}
                   {key === 'payment' && remaining > 0 && !payDone && (
                     <span className="w-2 h-2 rounded-full bg-amber-500 inline-block" />
@@ -236,33 +251,34 @@ export default function InvoiceModal({ isOpen, onClose, room, onPaymentConfirmed
                     <tbody className="divide-y divide-border-custom">
                       <tr className="bg-accent/5">
                         <td className="px-4 py-3 font-bold text-primary">
-                          <div className="flex items-center gap-2">
-                            <span className="material-symbols-outlined text-accent text-[16px]">bed</span>
-                            Tiền phòng {room.roomType} ({room.nights} đêm)
-                          </div>
+                          Tiền phòng {room.roomType} ({room.nights} đêm)
                         </td>
                         <td className="px-4 py-3 text-center text-text-secondary">{room.nights}</td>
-                        <td className="px-4 py-3 text-right text-text-secondary">{formatVND(roomTotal / room.nights)}</td>
+                        <td className="px-4 py-3 text-right text-text-secondary">{formatVND(roomTotal / Math.max(room.nights, 1))}</td>
                         <td className="px-4 py-3 text-right font-bold text-primary">{formatVND(roomTotal)}</td>
                       </tr>
-                      {services.map((s) => (
-                        <tr key={s.id} className="hover:bg-background/60 transition-colors">
-                          <td className="px-4 py-3 text-text-primary">
-                            <div className="flex items-center gap-2">
-                              <span className="material-symbols-outlined text-text-secondary text-[15px]">room_service</span>
-                              {s.name}
-                              {s.included && <Badge variant="success" size="sm">Đã bao gồm</Badge>}
-                            </div>
-                          </td>
-                          <td className="px-4 py-3 text-center text-text-secondary">{s.quantity}</td>
-                          <td className="px-4 py-3 text-right text-text-secondary">
-                            {s.included ? <span className="text-success-custom italic text-xs">Miễn phí</span> : formatVND(s.unitPrice)}
-                          </td>
-                          <td className="px-4 py-3 text-right font-semibold">
-                            {s.included ? <span className="text-success-custom">—</span> : <span className="text-primary">{formatVND(s.total)}</span>}
+                      {services.length > 0 ? (
+                        services.map((s, idx) => (
+                          <tr key={idx} className="hover:bg-background/60 transition-colors">
+                            <td className="px-4 py-3 text-text-primary">
+                              {s.serviceName}
+                            </td>
+                            <td className="px-4 py-3 text-center text-text-secondary">{s.quantity}</td>
+                            <td className="px-4 py-3 text-right text-text-secondary">
+                              {formatVND(s.unitPrice)}
+                            </td>
+                            <td className="px-4 py-3 text-right font-semibold text-primary">
+                              {formatVND(s.amount)}
+                            </td>
+                          </tr>
+                        ))
+                      ) : (
+                        <tr>
+                          <td colSpan={4} className="px-4 py-3 text-center text-xs text-text-secondary italic">
+                            Không có dịch vụ phát sinh thêm
                           </td>
                         </tr>
-                      ))}
+                      )}
                     </tbody>
                   </table>
 
@@ -306,7 +322,7 @@ export default function InvoiceModal({ isOpen, onClose, room, onPaymentConfirmed
                   {/* Nút chuyển sang thanh toán */}
                   {remaining > 0 && (
                     <div className="mt-5">
-                      <Button variant="primary" fullWidth iconLeft="payments" onClick={() => setTab('payment')}>
+                      <Button variant="primary" fullWidth onClick={() => setTab('payment')}>
                         Tiến hành thu tiền
                       </Button>
                     </div>
@@ -320,8 +336,8 @@ export default function InvoiceModal({ isOpen, onClose, room, onPaymentConfirmed
                   {payDone ? (
                     /* Success */
                     <div className="flex flex-col items-center text-center py-8 gap-4">
-                      <div className="w-16 h-16 rounded-full bg-emerald-100 border border-emerald-300 flex items-center justify-center">
-                        <span className="material-symbols-outlined text-[36px] text-emerald-700">check_circle</span>
+                      <div className="w-14 h-14 rounded-full bg-emerald-100 border border-emerald-300 flex items-center justify-center font-bold text-2xl text-emerald-700">
+                        ✓
                       </div>
                       <h4 className="font-headline text-xl font-bold text-primary">Thu tiền thành công!</h4>
                       <p className="text-sm text-text-secondary">
@@ -349,19 +365,18 @@ export default function InvoiceModal({ isOpen, onClose, room, onPaymentConfirmed
                             <p className="text-xs font-bold uppercase tracking-wider text-text-secondary mb-3">Hình thức thanh toán</p>
                             <div className="grid grid-cols-2 gap-3">
                               {[
-                                { key: 'cash',     icon: 'payments',      label: 'Tiền mặt' },
-                                { key: 'transfer', icon: 'account_balance', label: 'Chuyển khoản' },
-                              ].map(({ key, icon, label }) => (
+                                { key: 'cash',     label: 'Tiền mặt' },
+                                { key: 'transfer', label: 'Chuyển khoản (VietQR / PayOS)' },
+                              ].map(({ key, label }) => (
                                 <button
                                   key={key}
                                   onClick={() => setPayMethod(key)}
-                                  className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all ${
+                                  className={`flex flex-col items-center justify-center gap-1 p-4 rounded-xl border-2 transition-all ${
                                     payMethod === key
                                       ? 'border-accent bg-accent/10 text-primary'
                                       : 'border-border-custom bg-surface text-text-secondary hover:border-accent/50'
                                   }`}
                                 >
-                                  <span className={`material-symbols-outlined text-[28px] ${payMethod === key ? 'text-accent' : ''}`}>{icon}</span>
                                   <span className="text-sm font-semibold">{label}</span>
                                 </button>
                               ))}
@@ -372,8 +387,7 @@ export default function InvoiceModal({ isOpen, onClose, room, onPaymentConfirmed
                           {payMethod === 'cash' && (
                             <div className="space-y-3">
                               <div className="flex flex-col gap-1.5">
-                                <label className="text-xs font-bold uppercase tracking-wider text-text-secondary flex items-center gap-1.5">
-                                  <span className="material-symbols-outlined text-accent text-[16px]">payments</span>
+                                <label className="text-xs font-bold uppercase tracking-wider text-text-secondary">
                                   Số tiền khách đưa
                                 </label>
                                 <div className="relative">
@@ -420,9 +434,6 @@ export default function InvoiceModal({ isOpen, onClose, room, onPaymentConfirmed
                           {/* Chuyển khoản qua Cổng PayOS */}
                           {payMethod === 'transfer' && (
                             <div className="flex flex-col items-center gap-3.5 p-5 bg-surface-alt/50 rounded-2xl border border-border-custom text-center">
-                              <div className="w-14 h-14 rounded-2xl bg-accent/15 flex items-center justify-center border border-accent/30 text-accent">
-                                <span className="material-symbols-outlined text-[32px]">qr_code_scanner</span>
-                              </div>
                               <div>
                                 <p className="text-base font-bold text-primary">Cổng Thanh Toán Trực Tuyến PayOS (Dynamic VietQR)</p>
                                 <p className="text-xs text-text-secondary mt-1 max-w-sm">
@@ -445,7 +456,6 @@ export default function InvoiceModal({ isOpen, onClose, room, onPaymentConfirmed
                                 variant="primary"
                                 size="lg"
                                 fullWidth
-                                iconLeft="open_in_new"
                                 isLoading={isPayOSLoading}
                                 onClick={handlePayOSCheckout}
                               >
@@ -469,7 +479,6 @@ export default function InvoiceModal({ isOpen, onClose, room, onPaymentConfirmed
                               variant="secondary"
                               size="lg"
                               fullWidth
-                              iconLeft="check_circle"
                               isLoading={isCashLoading}
                               isDisabled={!canConfirm || isCashLoading}
                               onClick={handleConfirmPayment}
@@ -477,14 +486,12 @@ export default function InvoiceModal({ isOpen, onClose, room, onPaymentConfirmed
                               {isCashLoading ? 'Đang ghi nhận thanh toán…' : 'Xác nhận đã thu đủ tiền & Mở khóa trả phòng'}
                             </Button>
                             {!canConfirm && cashAmount > 0 && (
-                              <p className="text-center text-[11px] text-danger-custom flex items-center justify-center gap-1">
-                                <span className="material-symbols-outlined text-[14px]">lock</span>
+                              <p className="text-center text-[11px] text-danger-custom">
                                 Số tiền khách đưa chưa đủ
                               </p>
                             )}
                             {!canConfirm && !cashInput && (
-                              <p className="text-center text-[11px] text-text-secondary flex items-center justify-center gap-1">
-                                <span className="material-symbols-outlined text-[14px]">info</span>
+                              <p className="text-center text-[11px] text-text-secondary">
                                 Nhập số tiền khách đưa để tiếp tục
                               </p>
                             )}
