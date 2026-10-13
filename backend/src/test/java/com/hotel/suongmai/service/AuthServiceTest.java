@@ -46,6 +46,7 @@ class AuthServiceTest {
     private NhanVienRepository nhanVienRepository;
     private TaiKhoanRepository taiKhoanRepository;
     private PasswordEncoder passwordEncoder;
+    private EmailService emailService;
     private AuthService authService;
 
     @BeforeEach
@@ -56,10 +57,11 @@ class AuthServiceTest {
         nhanVienRepository = mock(NhanVienRepository.class);
         taiKhoanRepository = mock(TaiKhoanRepository.class);
         passwordEncoder = mock(PasswordEncoder.class);
+        emailService = mock(EmailService.class);
         authService = new AuthService(
                 authenticationManager, jwtTokenProvider,
                 khachHangRepository, nhanVienRepository,
-                taiKhoanRepository, passwordEncoder);
+                taiKhoanRepository, passwordEncoder, emailService);
     }
 
     @Test
