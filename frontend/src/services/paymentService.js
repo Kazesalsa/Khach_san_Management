@@ -13,6 +13,12 @@ const getAuthConfig = () => {
 
 const buildDefaultUrls = (bookingCode, type, customReturnUrl, customCancelUrl) => {
   const origin = window.location.origin;
+  if (type === 'DEPOSIT') {
+    return {
+      returnUrl: customReturnUrl || `${origin}/?payment=success&bookingCode=${bookingCode || ''}&type=DEPOSIT`,
+      cancelUrl: customCancelUrl || `${origin}/?payment=cancel&bookingCode=${bookingCode || ''}&type=DEPOSIT`,
+    };
+  }
   return {
     returnUrl: customReturnUrl || `${origin}/payment/result?bookingCode=${bookingCode || ''}&type=${type}`,
     cancelUrl: customCancelUrl || `${origin}/payment/result?bookingCode=${bookingCode || ''}&type=${type}&cancel=true`,

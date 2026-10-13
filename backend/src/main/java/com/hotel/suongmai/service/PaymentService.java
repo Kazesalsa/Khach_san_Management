@@ -45,6 +45,7 @@ public class PaymentService {
     private final ThanhToanRepository thanhToanRepository;
     private final HoaDonRepository hoaDonRepository;
     private final SuDungDichVuRepository suDungDichVuRepository;
+    private final EmailService emailService;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     private final HttpClient httpClient = HttpClient.newBuilder()
@@ -299,6 +300,10 @@ public class PaymentService {
                 booking.setStatus(BookingStatus.DA_DAT);
                 bookingRepository.save(booking);
                 log.info("Cập nhật booking {} sang trạng thái DA_DAT sau khi thanh toán cọc thành công", booking.getBookingCode());
+
+                if (booking.getCustomer() != null && booking.getCustomer().getEmail() != null) {
+                    emailService.sendBookingConfirmationEmail(booking.getCustomer().getEmail(), booking);
+                }
             } else if (thanhToan.getTransactionType() == LoaiGiaoDich.THANH_TOAN_HOA_DON) {
                 HoaDon invoice = thanhToan.getInvoice();
                 if (invoice != null) {
