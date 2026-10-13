@@ -18,7 +18,7 @@ public interface BookingRepository extends JpaRepository<Booking, String> {
     @Query("""
             SELECT COUNT(detail) > 0 FROM BookingDetail detail
             WHERE detail.room.roomCategory.id = :categoryId
-              AND detail.booking.status <> com.hotel.suongmai.entity.BookingStatus.DA_HUY
+              AND CAST(detail.booking.status AS string) <> 'DA_HUY'
               AND detail.expectedCheckInDate <= :toDate
               AND detail.expectedCheckOutDate >= :fromDate
         """)
