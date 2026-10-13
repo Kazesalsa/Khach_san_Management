@@ -1,0 +1,30 @@
+package com.hotel.suongmai.repository;
+
+import com.hotel.suongmai.entity.Booking;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
+
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+import java.time.LocalDate;
+import java.util.Optional;
+
+@Repository
+public interface BookingRepository extends JpaRepository<Booking, String> {
+
+    boolean existsByBookingCode(String bookingCode);
+
+    Optional<Booking> findByBookingCode(String bookingCode);
+    @Query("""
+            SELECT COUNT(detail) > 0 FROM BookingDetail detail
+            WHERE detail.room.roomCategory.id = :categoryId
+              AND CAST(detail.booking.status AS string) <> 'DA_HUY'
+              AND detail.expectedCheckInDate <= :toDate
+              AND detail.expectedCheckOutDate >= :fromDate
+        """)
+    boolean existsActiveBookingsInDateRange(
+            @Param("categoryId") String categoryId,
+            @Param("fromDate") LocalDate fromDate,
+            @Param("toDate") LocalDate toDate
+    );
+}

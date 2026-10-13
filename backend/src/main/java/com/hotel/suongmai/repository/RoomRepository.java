@@ -1,0 +1,53 @@
+package com.hotel.suongmai.repository;
+
+import com.hotel.suongmai.entity.Room;
+import com.hotel.suongmai.entity.CleaningStatus;
+import com.hotel.suongmai.entity.UsageStatus;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+import org.springframework.stereotype.Repository;
+
+import java.time.LocalDate;
+import java.util.List;
+import java.util.Optional;
+
+@Repository
+public interface RoomRepository extends JpaRepository<Room, String> {
+    Optional<Room> findByRoomCode(String roomCode);
+    Optional<Room> findByRoomNumber(String roomNumber);
+    List<Room> findByRoomCategory_Id(String categoryId);
+    List<Room> findByUsageStatusAndCleaningStatus(UsageStatus usageStatus, CleaningStatus cleaningStatus);
+    List<Room> findAllByOrderByFloorAscRoomNumberAsc();
+
+    @Query("SELECT DISTINCT r FROM Room r " +
+            "LEFT JOIN FETCH r.roomCategory rc " +
+            "LEFT JOIN FETCH rc.amenities " +
+            "ORDER BY r.floor ASC, r.roomNumber ASC")
+    List<Room> findAllWithCategoryAndAmenities();
+
+    @Query("SELECT DISTINCT r FROM Room r " +
+            "LEFT JOIN FETCH r.roomCategory rc " +
+            "LEFT JOIN FETCH rc.amenities " +
+            "WHERE r.id = :id OR r.roomCode = :id OR r.roomNumber = :id")
+    Optional<Room> findByIdOrCodeWithCategoryAndAmenities(@Param("id") String id);
+
+    @Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT room FROM Room room JOIN FETCH room.roomCategory WHERE room.id = :roomId")
+    Optional<Room> findByIdForBooking(@Param("roomId") String roomId);
+
+    @Query(value = "SELECT r.* FROM phong r " +
+            "WHERE NOT EXISTS ( " +
+            "    SELECT 1 FROM chi_tiet_dat_phong bd " +
+            "    JOIN phieu_dat_phong pdp ON pdp.id = bd.phieu_dat_phong_id " +
+            "    WHERE bd.phong_id = r.id " +
+            "    AND :toDate > bd.ngay_nhan_du_kien " +
+            "    AND :fromDate < bd.ngay_tra_du_kien " +
+            "    AND CAST(pdp.trang_thai AS VARCHAR) IN ('CHO_XAC_NHAN', 'DA_DAT', 'DA_NHAN') " +
+            ")", nativeQuery = true)
+    List<Room> findAvailableRooms(
+            @Param("fromDate") LocalDate fromDate,
+            @Param("toDate") LocalDate toDate
+    );
+}

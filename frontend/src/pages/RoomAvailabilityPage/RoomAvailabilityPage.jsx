@@ -1,0 +1,469 @@
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { useSearchParams, Link, useNavigate } from 'react-router-dom';
+import axios from 'axios';
+import DatePicker from '../../components/ui/DatePicker';
+import Badge from '../../components/ui/Badge';
+import Button from '../../components/ui/Button';
+import { getLocalDate } from '../../services/bookingService';
+
+const API_BASE = import.meta.env.VITE_API_URL || '/api';
+
+// Định dạng ngày về yyyy-MM-dd để gửi lên API
+const toDateString = (date) => date;
+
+// Định dạng ngày hiển thị đẹp cho người dùng
+const formatDisplayDate = (dateStr) => {
+  if (!dateStr) return '';
+  const d = new Date(dateStr + 'T00:00:00');
+  return d.toLocaleDateString('vi-VN', {
+    weekday: 'short',
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+  });
+};
+
+// Format giá tiền VNĐ
+const formatPrice = (price) =>
+  new Intl.NumberFormat('vi-VN', {
+    style: 'currency',
+    currency: 'VND',
+    maximumFractionDigits: 0,
+  }).format(price);
+
+function RoomAvailabilityPage() {
+  const navigate = useNavigate();
+  useEffect(() => {
+    document.title = 'Tra Cứu Phòng Trống | Sương Mai Hotel';
+  }, []);
+
+  const [searchParams] = useSearchParams();
+  const today = getLocalDate();
+  const tomorrow = getLocalDate(1);
+
+  const paramCheckIn = searchParams.get('checkIn') || searchParams.get('from_date') || '';
+  const paramCheckOut = searchParams.get('checkOut') || searchParams.get('to_date') || '';
+
+  const [checkIn, setCheckIn] = useState(paramCheckIn);
+  const [checkOut, setCheckOut] = useState(paramCheckOut);
+  const [errors, setErrors] = useState({});
+  const [loading, setLoading] = useState(false);
+  const [rooms, setRooms] = useState(null); // null = chưa search, [] = không có phòng
+  const [apiError, setApiError] = useState('');
+  const [searched, setSearched] = useState(false);
+  const [searchedDates, setSearchedDates] = useState(null);
+  const requestSequence = useRef(0);
+
+  const invalidateSearch = () => {
+    requestSequence.current += 1;
+    setRooms(null);
+    setSearched(false);
+    setSearchedDates(null);
+    setLoading(false);
+    setApiError('');
+  };
+
+  // Validate ngày trước khi gọi API
+  const validate = () => {
+    const newErrors = {};
+
+    if (!checkIn) {
+      newErrors.checkIn = 'Vui lòng chọn ngày nhận phòng';
+    } else if (checkIn < today) {
+      newErrors.checkIn = 'Ngày nhận phòng không được là ngày trong quá khứ';
+    }
+
+    if (!checkOut) {
+      newErrors.checkOut = 'Vui lòng chọn ngày trả phòng';
+    } else if (checkIn && checkOut <= checkIn) {
+      newErrors.checkOut = 'Ngày trả phòng phải sau ngày nhận phòng';
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  // Xử lý thay đổi ngày nhận phòng — tự động reset ngày trả nếu bị lỗi
+  const handleCheckInChange = (e) => {
+    invalidateSearch();
+    const val = e.target.value;
+    setCheckIn(val);
+    setErrors((prev) => ({ ...prev, checkIn: '' }));
+
+    // Nếu ngày trả đã chọn mà <= ngày nhận mới → báo lỗi ngay
+    if (checkOut && checkOut <= val) {
+      setErrors((prev) => ({
+        ...prev,
+        checkOut: 'Ngày trả phòng phải sau ngày nhận phòng',
+      }));
+    } else {
+      setErrors((prev) => ({ ...prev, checkOut: '' }));
+    }
+  };
+
+  // Xử lý thay đổi ngày trả phòng
+  const handleCheckOutChange = (e) => {
+    invalidateSearch();
+    const val = e.target.value;
+    setCheckOut(val);
+
+    if (checkIn && val <= checkIn) {
+      setErrors((prev) => ({
+        ...prev,
+        checkOut: 'Ngày trả phòng phải sau ngày nhận phòng',
+      }));
+    } else {
+      setErrors((prev) => ({ ...prev, checkOut: '' }));
+    }
+  };
+
+  // Bàn giao phòng và ngày cho form đặt phòng (UC-05 / #86).
+  const handleBookNow = (room) => {
+    if (!searchedDates || searchedDates.checkIn !== checkIn || searchedDates.checkOut !== checkOut) {
+      setApiError('Ngày lưu trú đã thay đổi. Vui lòng tra cứu lại trước khi đặt phòng.');
+      return;
+    }
+    const id = room.roomId ?? room.id;
+    if (!id) {
+      setApiError('Không xác định được ID phòng. Vui lòng tra cứu lại.');
+      return;
+    }
+    const params = new URLSearchParams({
+      roomId: String(id),
+      checkIn: searchedDates.checkIn,
+      checkOut: searchedDates.checkOut,
+    });
+    navigate(`/booking?${params.toString()}`);
+  };
+
+  // Hàm gọi API tra cứu phòng trống
+  const fetchAvailableRooms = useCallback(async (inDate, outDate) => {
+    if (!inDate || !outDate || inDate >= outDate) return;
+    const sequence = ++requestSequence.current;
+
+    setLoading(true);
+    setApiError('');
+    setRooms(null);
+    setSearched(false);
+    setSearchedDates(null);
+
+    // Lấy token từ storage (remember me → localStorage, ngược lại → sessionStorage)
+    const token =
+      localStorage.getItem('authToken') || sessionStorage.getItem('authToken');
+
+    try {
+      const response = await axios.get(`${API_BASE}/rooms/available`, {
+        params: {
+          from_date: toDateString(inDate),
+          to_date: toDateString(outDate),
+        },
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      if (sequence !== requestSequence.current) return;
+      if (!Array.isArray(response.data)) throw new Error('Dữ liệu phòng không hợp lệ');
+      setRooms(response.data);
+      setSearchedDates({ checkIn: inDate, checkOut: outDate });
+      setSearched(true);
+    } catch (err) {
+      if (sequence !== requestSequence.current) return;
+      if (err.response) {
+        // Lỗi từ server (4xx, 5xx)
+        setApiError(
+          err.response.data?.message ||
+            `Lỗi từ máy chủ (${err.response.status}). Vui lòng thử lại.`
+        );
+      } else if (err.request) {
+        // Không kết nối được backend
+        setApiError(
+          'Không thể kết nối tới máy chủ. Vui lòng kiểm tra backend đang chạy.'
+        );
+      } else {
+        setApiError('Đã xảy ra lỗi không xác định. Vui lòng thử lại.');
+      }
+      setSearched(true);
+    } finally {
+      if (sequence === requestSequence.current) setLoading(false);
+    }
+  }, []);
+
+  // Tự động tìm kiếm nếu có tham số truyền từ URL (ví dụ từ Trang chủ)
+  useEffect(() => {
+    if (paramCheckIn >= today && paramCheckOut > paramCheckIn) {
+      setCheckIn(paramCheckIn);
+      setCheckOut(paramCheckOut);
+      fetchAvailableRooms(paramCheckIn, paramCheckOut);
+    }
+  }, [paramCheckIn, paramCheckOut, fetchAvailableRooms, today]);
+
+  useEffect(() => () => { requestSequence.current += 1; }, []);
+
+  // Xử lý khi người dùng bấm nút [Tìm phòng] trên form
+  const handleSearch = async (e) => {
+    if (e) e.preventDefault();
+    if (!validate()) return;
+    await fetchAvailableRooms(checkIn, checkOut);
+  };
+
+  // Tính số đêm
+  const nightCount =
+    checkIn && checkOut && checkOut > checkIn
+      ? Math.round(
+          (new Date(checkOut) - new Date(checkIn)) / (1000 * 60 * 60 * 24)
+        )
+      : 0;
+
+  return (
+    <div className="min-h-screen bg-background">
+      {/* Header */}
+      <header className="bg-primary text-text-on-dark border-b border-white/10">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 py-6">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <p className="text-accent text-xs font-semibold">
+                Sương Mai Hotel
+              </p>
+              <h1 className="text-2xl sm:text-3xl font-bold mt-1">
+                Tra Cứu Phòng Trống
+              </h1>
+              <p className="text-text-on-dark/70 text-sm mt-1">
+                Chọn ngày nhận phòng và trả phòng để xem danh sách phòng còn trống
+              </p>
+            </div>
+            <Link
+              to="/"
+              className="inline-flex items-center gap-2 rounded-xl border border-white/20 px-3 sm:px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-white/10 shrink-0"
+            >
+              <span className="material-symbols-outlined text-[18px]">arrow_back</span>
+              <span className="hidden sm:inline">Về trang chủ</span>
+            </Link>
+          </div>
+        </div>
+      </header>
+
+      <main className="max-w-5xl mx-auto px-4 sm:px-6 py-8 space-y-8">
+        {/* Search Form */}
+        <section className="bg-surface rounded-2xl border border-border-custom shadow-sm p-6">
+          <h2 className="text-xl font-bold text-primary mb-5">
+            Chọn Thời Gian Lưu Trú
+          </h2>
+
+          <form onSubmit={handleSearch} noValidate>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 mb-6">
+              {/* Ngày nhận phòng */}
+              <DatePicker
+                id="check-in"
+                label="Ngày nhận phòng"
+                icon="calendar_today"
+                value={checkIn}
+                onChange={handleCheckInChange}
+                min={today}
+                required
+                error={errors.checkIn}
+                helperText={
+                  checkIn
+                    ? formatDisplayDate(checkIn)
+                    : 'Tối thiểu từ hôm nay'
+                }
+              />
+
+              {/* Ngày trả phòng */}
+              <DatePicker
+                id="check-out"
+                label="Ngày trả phòng"
+                icon="event"
+                value={checkOut}
+                onChange={handleCheckOutChange}
+                min={checkIn ? (() => {
+                  // min của check-out = ngày sau check-in
+                  const d = new Date(checkIn + 'T00:00:00');
+                  d.setDate(d.getDate() + 1);
+                  return d.toISOString().split('T')[0];
+                })() : tomorrow}
+                required
+                error={errors.checkOut}
+                helperText={
+                  checkOut
+                    ? formatDisplayDate(checkOut)
+                    : 'Phải sau ngày nhận phòng'
+                }
+              />
+            </div>
+
+            {/* Thông tin tóm tắt kỳ lưu trú */}
+            {nightCount > 0 && (
+              <div className="mb-5 flex items-center gap-2 text-sm text-text-secondary bg-background rounded-xl px-4 py-3 border border-border-custom">
+                <span className="material-symbols-outlined text-accent text-[18px]">
+                  nights_stay
+                </span>
+                <span>
+                  Lưu trú{' '}
+                  <strong className="text-primary">{nightCount} đêm</strong>
+                  {' · '}
+                  {formatDisplayDate(checkIn)} →{' '}
+                  {formatDisplayDate(checkOut)}
+                </span>
+              </div>
+            )}
+
+            <Button
+              type="submit"
+              iconLeft={loading ? null : 'search'}
+              isLoading={loading}
+              fullWidth
+              size="lg"
+            >
+              {loading ? 'Đang tra cứu...' : 'Tìm Phòng Trống'}
+            </Button>
+          </form>
+        </section>
+
+        {/* Kết quả */}
+        {searched && (
+          <section>
+            {/* Lỗi API */}
+            {apiError && (
+              <div className="bg-surface rounded-2xl border border-danger-custom/30 shadow-sm p-6 flex items-start gap-4">
+                <span className="material-symbols-outlined text-danger-custom text-3xl shrink-0">
+                  wifi_off
+                </span>
+                <div>
+                  <h3 className="font-bold text-danger-custom text-base">
+                    Không thể tra cứu
+                  </h3>
+                  <p className="text-text-secondary text-sm mt-1">{apiError}</p>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    iconLeft="refresh"
+                    onClick={handleSearch}
+                    className="mt-4"
+                  >
+                    Thử lại
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {/* Không có phòng trống */}
+            {!apiError && rooms && rooms.length === 0 && (
+              <div className="bg-surface rounded-2xl border border-border-custom shadow-sm p-12 flex flex-col items-center text-center gap-3">
+                <span className="material-symbols-outlined text-5xl text-text-secondary/40">
+                  bed
+                </span>
+                <h3 className="font-headline text-xl font-bold text-primary">
+                  Không có phòng trống
+                </h3>
+                <p className="text-text-secondary text-sm max-w-sm">
+                  Không tìm thấy phòng trống trong khoảng thời gian từ{' '}
+                  <strong>{formatDisplayDate(checkIn)}</strong> đến{' '}
+                  <strong>{formatDisplayDate(checkOut)}</strong>.
+                </p>
+                <p className="text-text-secondary text-sm">
+                  Vui lòng thử chọn khoảng thời gian khác.
+                </p>
+              </div>
+            )}
+
+            {/* Danh sách phòng trống */}
+            {!apiError && rooms && rooms.length > 0 && (
+              <>
+                {/* Header kết quả */}
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <h2 className="font-headline text-2xl font-bold text-primary">
+                      Phòng Trống
+                    </h2>
+                    <p className="text-sm text-text-secondary mt-1">
+                      Tìm thấy{' '}
+                      <strong className="text-primary">{rooms.length} phòng</strong>{' '}
+                      · {nightCount} đêm · {formatDisplayDate(checkIn)} →{' '}
+                      {formatDisplayDate(checkOut)}
+                    </p>
+                  </div>
+                  <Badge variant="success" dot>
+                    {rooms.length} phòng trống
+                  </Badge>
+                </div>
+
+                {/* Bảng phòng */}
+                <div className="bg-surface rounded-2xl border border-border-custom shadow-sm overflow-hidden">
+                  <div className="overflow-x-auto">
+                    <table className="w-full min-w-[600px]">
+                      <thead className="bg-surface-alt/60">
+                        <tr className="text-left">
+                          <th className="px-6 py-4 text-xs uppercase tracking-wider text-text-secondary">
+                            Số phòng
+                          </th>
+                          <th className="px-6 py-4 text-xs uppercase tracking-wider text-text-secondary">
+                            Loại phòng
+                          </th>
+                          <th className="px-6 py-4 text-xs uppercase tracking-wider text-text-secondary">
+                            Sức chứa
+                          </th>
+                          <th className="px-6 py-4 text-xs uppercase tracking-wider text-text-secondary">
+                            Giá / đêm
+                          </th>
+                          <th className="px-6 py-4 text-xs uppercase tracking-wider text-text-secondary">
+                            Tổng {nightCount} đêm
+                          </th>
+                          <th className="px-6 py-4 text-xs uppercase tracking-wider text-text-secondary">
+                            Trạng thái
+                          </th>
+                          <th className="px-6 py-4 text-xs uppercase tracking-wider text-text-secondary">
+                            Thao tác
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-border-custom">
+                        {rooms.map((room) => (
+                          <tr
+                            key={room.id ?? room.roomNumber}
+                            className="hover:bg-background/70 transition-colors"
+                          >
+                            <td className="px-6 py-4 font-bold text-primary">
+                              {room.roomNumber ?? room.number ?? room.id}
+                            </td>
+                            <td className="px-6 py-4 text-text-primary">
+                              {room.roomType ?? room.type ?? '—'}
+                            </td>
+                            <td className="px-6 py-4 text-text-secondary">
+                              {room.capacity ?? room.maxGuests
+                                ? `${room.capacity ?? room.maxGuests} khách`
+                                : '—'}
+                            </td>
+                            <td className="px-6 py-4 font-semibold text-success-custom">
+                              {room.pricePerNight
+                                ? formatPrice(room.pricePerNight)
+                                : '—'}
+                            </td>
+                            <td className="px-6 py-4 font-bold text-primary">
+                              {room.pricePerNight && nightCount
+                                ? formatPrice(room.pricePerNight * nightCount)
+                                : '—'}
+                            </td>
+                            <td className="px-6 py-4">
+                              <Badge variant="success" dot>
+                                Còn trống
+                              </Badge>
+                            </td>
+                            <td className="px-6 py-4">
+                              <Button variant="primary" size="sm" onClick={() => handleBookNow(room)}>
+                                Đặt ngay
+                              </Button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </>
+            )}
+          </section>
+        )}
+      </main>
+    </div>
+  );
+}
+
+export default RoomAvailabilityPage;

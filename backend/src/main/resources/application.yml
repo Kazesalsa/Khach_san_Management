@@ -1,0 +1,48 @@
+spring:
+  application:
+    name: suongmai
+
+  datasource:
+    # URL kết nối tới PostgreSQL container đang mở tại localhost:5433
+    url: jdbc:postgresql://localhost:5433/suongmai_db
+    username: postgres
+    password: 12345
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    # hibernate ddl-auto:
+    # - "none": Không tự động tạo hay sửa bảng
+    # - "update": Tự động cập nhật bảng theo các @Entity class mà không xóa dữ liệu cũ
+    hibernate:
+      ddl-auto: none
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: ${MAIL_USERNAME:tv2952018@gmail.com}
+    password: ${MAIL_PASSWORD:uqipqegzcxmhgwbn}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+            required: true
+          connectiontimeout: 5000
+          timeout: 5000
+          writetimeout: 5000
+
+server:
+  port: 8080
+
+payos:
+  client-id: ${PAYOS_CLIENT_ID:3e809569-9fb6-4b40-8863-ee97df31ad4f}
+  api-key: ${PAYOS_API_KEY:34540991-1430-4d0f-a2be-0d800ec50f8e}
+  checksum-key: ${PAYOS_CHECKSUM_KEY:0bc7d96e73db7bc5ff472026fa247b3ca9f3d11d6a6d4444127d46b77ba45013}
+  return-url: ${PAYOS_RETURN_URL:http://localhost:5173/payment/result}
+  cancel-url: ${PAYOS_CANCEL_URL:http://localhost:5173/payment/result?cancel=true}
