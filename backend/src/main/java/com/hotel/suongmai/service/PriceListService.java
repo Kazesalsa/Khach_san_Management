@@ -54,8 +54,7 @@ public class PriceListService {
         if (priceListRepository.existsOverlappingPrice(
                 categoryId,
                 startDate,
-                endDate,
-                null
+                endDate
         )) {
             throw new PriceListOverlapException(
                     "Khoảng thời gian này đã tồn tại bảng giá cho loại phòng được chọn!"
@@ -110,7 +109,7 @@ public class PriceListService {
         String categoryId =
                 existingPriceList.getRoomCategory().getId();
 
-        if (priceListRepository.existsOverlappingPrice(
+        if (priceListRepository.existsOverlappingPriceExcludingId(
                 categoryId,
                 newStartDate,
                 newEndDate,

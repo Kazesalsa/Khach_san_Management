@@ -24,11 +24,25 @@ public interface PriceListRepository extends JpaRepository<PriceList, String> {
     Optional<PriceList> findFirstByRoomCategory_IdAndStartDateLessThanEqualAndEndDateGreaterThanEqualAndStatus(
             String categoryId, LocalDateTime checkIn, LocalDateTime checkOut, String status);
     
-    @Query("SELECT COUNT(p) > 0 FROM PriceList p WHERE p.roomCategory.id = :categoryId " +
-           "AND p.startDate <= :endDate AND p.endDate >= :startDate " +
-           "AND (:excludeId IS NULL OR p.id != :excludeId)")
-    boolean existsOverlappingPrice(@Param("categoryId") String categoryId, 
-                                   @Param("startDate") LocalDateTime startDate, 
-                                   @Param("endDate") LocalDateTime endDate, 
-                                   @Param("excludeId") String excludeId);
+    @Query("SELECT COUNT(p) > 0 FROM PriceList p " +
+            "WHERE p.roomCategory.id = :categoryId " +
+            "AND p.startDate <= :endDate " +
+            "AND p.endDate >= :startDate")
+    boolean existsOverlappingPrice(
+            @Param("categoryId") String categoryId,
+            @Param("startDate") LocalDateTime startDate,
+            @Param("endDate") LocalDateTime endDate
+    );
+
+    @Query("SELECT COUNT(p) > 0 FROM PriceList p " +
+            "WHERE p.roomCategory.id = :categoryId " +
+            "AND p.startDate <= :endDate " +
+            "AND p.endDate >= :startDate " +
+            "AND p.id <> :excludeId")
+    boolean existsOverlappingPriceExcludingId(
+            @Param("categoryId") String categoryId,
+            @Param("startDate") LocalDateTime startDate,
+            @Param("endDate") LocalDateTime endDate,
+            @Param("excludeId") String excludeId
+    );
 }
