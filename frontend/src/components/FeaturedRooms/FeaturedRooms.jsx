@@ -206,28 +206,6 @@ const FeaturedRooms = () => {
         </Link>
       </motion.div>
 
-      {/* Banner cảnh báo chống Double-Booking */}
-      <motion.div 
-        initial={{ opacity: 0, y: 20 }}
-        whileInView={{ opacity: 1, y: 0 }}
-        viewport={{ once: true }}
-        transition={{ delay: 0.2 }}
-        className="mt-8 bg-surface-alt border border-border-custom p-5 rounded-xl flex flex-col md:flex-row items-center gap-4 shadow-sm"
-      >
-        <div className="w-12 h-12 rounded-full bg-primary/10 border border-border-custom flex items-center justify-center shrink-0 text-primary">
-          <span className="material-symbols-outlined text-[26px] text-primary">lock_clock</span>
-        </div>
-        <div className="flex flex-col flex-1">
-          <h4 className="text-sm font-bold text-text-primary">Cơ chế Khóa phòng tự động ngăn trùng lịch (Anti-Double Booking)</h4>
-          <p className="text-xs text-text-secondary mt-0.5">
-            Hệ thống sẽ khóa phòng tạm thời <strong>10 phút</strong> ngay khi quý khách chuyển sang bước nhập thông tin để đảm bảo phòng giữ đúng chỗ của bạn, tránh xung đột lịch với các khách lưu trú khác trong cùng thời điểm.
-          </p>
-        </div>
-        <div className="shrink-0 flex items-center gap-1.5 text-accent font-semibold text-xs bg-surface border border-border-custom px-3 py-1.5 rounded-lg">
-          <span className="material-symbols-outlined text-[18px]">verified</span>
-          <span>Công nghệ SRS V1.4</span>
-        </div>
-      </motion.div>
     </section>
   );
 };
