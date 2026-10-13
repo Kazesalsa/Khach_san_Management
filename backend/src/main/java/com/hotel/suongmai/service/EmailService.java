@@ -111,8 +111,7 @@ public class EmailService {
                     MimeMessageHelper helper = new MimeMessageHelper(mimeMessage, true, "UTF-8");
 
                     helper.setFrom(fromEmail, "Khách Sạn Sương Mai");
-                    helper.setTo(toEmail.trim());
-                    helper.setSubject("🌿 [Sương Mai Hotel] Xác nhận đặt phòng thành công - Mã " + bookingCode);
+                    helper.setSubject("[Sương Mai Hotel] Xác nhận đặt phòng thành công - Mã " + bookingCode);
                     helper.setText(htmlContent, true);
 
                     mailSender.send(mimeMessage);
@@ -135,41 +134,32 @@ public class EmailService {
             <head>
               <meta charset="UTF-8">
               <style>
-                body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #2C2A29; background-color: #FBF9F5; margin: 0; padding: 20px; }
-                .container { max-width: 600px; margin: 0 auto; background: #FFFFFF; border-radius: 12px; border: 1px solid #E6E1DA; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
-                .header { background: #1C3328; color: #C5A059; padding: 28px 24px; text-align: center; }
-                .header h1 { margin: 0 0 6px 0; font-size: 24px; letter-spacing: 1px; font-weight: 600; text-transform: uppercase; }
-                .header p { margin: 0; font-size: 13px; color: #E0D7C6; letter-spacing: 0.5px; }
-                .content { padding: 32px 28px; }
-                .greeting { font-size: 16px; font-weight: 600; color: #1C3328; margin-bottom: 12px; }
-                .intro { font-size: 14px; line-height: 1.6; color: #5C5856; margin-bottom: 24px; }
-                .card { background: #F6F4F0; border: 1px solid #EBE7E0; border-radius: 8px; padding: 20px; margin-bottom: 24px; }
-                .row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px dashed #DDD7CC; font-size: 13px; }
-                .row:last-child { border-bottom: none; }
-                .label { color: #7A7571; font-weight: 500; }
-                .value { color: #1C3328; font-weight: 600; text-align: right; }
-                .highlight-val { color: #C5A059; font-weight: 700; font-size: 15px; }
-                .status-badge { display: inline-block; background: #E8F5E9; color: #2E7D32; font-size: 12px; font-weight: 600; padding: 4px 10px; border-radius: 12px; margin-top: 4px; }
-                .footer { background: #F6F4F0; border-top: 1px solid #E6E1DA; padding: 20px; text-align: center; font-size: 12px; color: #8A8580; line-height: 1.6; }
-                .footer strong { color: #1C3328; }
+                body { font-family: Arial, Helvetica, sans-serif; color: #374151; background-color: #f9fafb; margin: 0; padding: 24px; font-size: 14px; line-height: 1.6; }
+                .container { max-width: 560px; margin: 0 auto; background: #ffffff; border: 1px solid #e5e7eb; border-radius: 8px; padding: 32px 28px; }
+                .header { border-bottom: 1px solid #e5e7eb; padding-bottom: 16px; margin-bottom: 24px; }
+                .header h1 { margin: 0; font-size: 20px; color: #111827; font-weight: 700; }
+                .greeting { font-size: 15px; font-weight: 600; color: #111827; margin-bottom: 12px; }
+                .card { background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 6px; padding: 18px; margin: 20px 0; }
+                .row { display: flex; justify-content: space-between; padding: 6px 0; font-size: 13px; }
+                .label { color: #6b7280; }
+                .value { color: #111827; font-weight: 600; text-align: right; }
+                .status-badge { color: #15803d; font-weight: 600; }
+                .footer { border-top: 1px solid #e5e7eb; padding-top: 20px; margin-top: 28px; font-size: 12px; color: #9ca3af; line-height: 1.5; }
               </style>
             </head>
             <body>
               <div class="container">
                 <div class="header">
-                  <h1>Sương Mai Hotel</h1>
-                  <p>Indochine Heritage Luxury • Phố Cổ Hà Nội</p>
+                  <h1>Khách Sạn Sương Mai</h1>
                 </div>
                 <div class="content">
                   <div class="greeting">Kính chào %s,</div>
-                  <div class="intro">
-                    Cảm ơn Quý khách đã tin tưởng và lựa chọn Khách sạn Sương Mai. Chúng tôi xin xác nhận yêu cầu đặt phòng của Quý khách đã được giữ chỗ thành công sau khi hoàn tất thanh toán tiền cọc qua cổng PayOS.
-                  </div>
+                  <p>Cảm ơn Quý khách đã đặt phòng tại Khách sạn Sương Mai. Yêu cầu đặt phòng của Quý khách đã được xác nhận sau khi hoàn tất thanh toán tiền cọc qua cổng PayOS.</p>
 
                   <div class="card">
                     <div class="row">
                       <span class="label">Mã đặt phòng:</span>
-                      <span class="value highlight-val">%s</span>
+                      <span class="value">%s</span>
                     </div>
                     <div class="row">
                       <span class="label">Hạng phòng:</span>
@@ -185,7 +175,7 @@ public class EmailService {
                     </div>
                     <div class="row">
                       <span class="label">Tiền cọc đã thanh toán (30%%):</span>
-                      <span class="value" style="color: #2E7D32;">%s</span>
+                      <span class="value" style="color: #15803d;">%s</span>
                     </div>
                     <div class="row">
                       <span class="label">Tổng chi phí dự kiến:</span>
@@ -197,23 +187,22 @@ public class EmailService {
                     </div>
                     <div class="row">
                       <span class="label">Trạng thái:</span>
-                      <span class="value"><span class="status-badge">✓ Đã xác nhận & Giữ phòng</span></span>
+                      <span class="value status-badge">Đã xác nhận & Giữ phòng</span>
                     </div>
                   </div>
 
-                  <p style="font-size: 13px; color: #6E6965; line-height: 1.5; margin-bottom: 8px;">
+                  <p style="font-size: 13px; color: #6b7280; margin-bottom: 6px;">
                     • <strong>Thời gian nhận phòng (Check-in):</strong> từ 14:00 ngày %s<br>
                     • <strong>Thời gian trả phòng (Check-out):</strong> trước 12:00 ngày %s
                   </p>
-                  <p style="font-size: 13px; color: #6E6965; line-height: 1.5;">
+                  <p style="font-size: 13px; color: #6b7280;">
                     Quý khách vui lòng xuất trình Mã đặt phòng hoặc Căn cước công dân tại quầy lễ tân khi làm thủ tục nhận phòng.
                   </p>
                 </div>
                 <div class="footer">
                   <strong>Khách sạn Sương Mai</strong><br>
                   Địa chỉ: 45 Hàng Bè, Hoàn Kiếm, Hà Nội<br>
-                  Hotline hỗ trợ 24/7: 024 3828 9999 • Email: reservation@suongmaihotel.vn<br>
-                  <em>Kính chúc Quý khách một kỳ nghỉ an yên và trọn vẹn!</em>
+                  Hotline: 024 3828 9999 • Email: reservation@suongmaihotel.vn
                 </div>
               </div>
             </body>
@@ -253,7 +242,7 @@ public class EmailService {
 
                 helper.setFrom(fromEmail, "Khách Sạn Sương Mai");
                 helper.setTo(toEmail.trim());
-                helper.setSubject("🌿 [Sương Mai Hotel] Chào mừng Quý khách gia nhập thành viên Sương Mai");
+                helper.setSubject("[Sương Mai Hotel] Chào mừng Quý khách gia nhập thành viên");
 
                 String htmlContent = buildWelcomeEmailTemplate(name, toEmail.trim(), registerTime);
                 helper.setText(htmlContent, true);
@@ -272,42 +261,32 @@ public class EmailService {
             <head>
               <meta charset="UTF-8">
               <style>
-                body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #2C2A29; background-color: #FBF9F5; margin: 0; padding: 20px; }
-                .container { max-width: 600px; margin: 0 auto; background: #FFFFFF; border-radius: 12px; border: 1px solid #E6E1DA; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
-                .header { background: #1C3328; color: #C5A059; padding: 28px 24px; text-align: center; }
-                .header h1 { margin: 0 0 6px 0; font-size: 24px; letter-spacing: 1px; font-weight: 600; text-transform: uppercase; }
-                .header p { margin: 0; font-size: 13px; color: #E0D7C6; letter-spacing: 0.5px; }
-                .content { padding: 32px 28px; }
-                .greeting { font-size: 16px; font-weight: 600; color: #1C3328; margin-bottom: 12px; }
-                .intro { font-size: 14px; line-height: 1.6; color: #5C5856; margin-bottom: 24px; }
-                .card { background: #F6F4F0; border: 1px solid #EBE7E0; border-radius: 8px; padding: 20px; margin-bottom: 24px; }
-                .row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px dashed #DDD7CC; font-size: 13px; }
-                .row:last-child { border-bottom: none; }
-                .label { color: #7A7571; font-weight: 500; }
-                .value { color: #1C3328; font-weight: 600; text-align: right; }
-                .highlight-val { color: #C5A059; font-weight: 700; font-size: 15px; }
-                .status-badge { display: inline-block; background: #E8F5E9; color: #2E7D32; font-size: 12px; font-weight: 600; padding: 4px 10px; border-radius: 12px; margin-top: 4px; }
-                .benefits { background: #FAF8F5; border-left: 3px solid #C5A059; padding: 14px 16px; margin-bottom: 24px; font-size: 13px; color: #555; line-height: 1.6; }
-                .footer { background: #F6F4F0; border-top: 1px solid #E6E1DA; padding: 20px; text-align: center; font-size: 12px; color: #8A8580; line-height: 1.6; }
-                .footer strong { color: #1C3328; }
+                body { font-family: Arial, Helvetica, sans-serif; color: #374151; background-color: #f9fafb; margin: 0; padding: 24px; font-size: 14px; line-height: 1.6; }
+                .container { max-width: 560px; margin: 0 auto; background: #ffffff; border: 1px solid #e5e7eb; border-radius: 8px; padding: 32px 28px; }
+                .header { border-bottom: 1px solid #e5e7eb; padding-bottom: 16px; margin-bottom: 24px; }
+                .header h1 { margin: 0; font-size: 20px; color: #111827; font-weight: 700; }
+                .greeting { font-size: 15px; font-weight: 600; color: #111827; margin-bottom: 12px; }
+                .card { background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 6px; padding: 18px; margin: 20px 0; }
+                .row { display: flex; justify-content: space-between; padding: 6px 0; font-size: 13px; }
+                .label { color: #6b7280; }
+                .value { color: #111827; font-weight: 600; text-align: right; }
+                .status-badge { color: #15803d; font-weight: 600; }
+                .footer { border-top: 1px solid #e5e7eb; padding-top: 20px; margin-top: 28px; font-size: 12px; color: #9ca3af; line-height: 1.5; }
               </style>
             </head>
             <body>
               <div class="container">
                 <div class="header">
-                  <h1>Sương Mai Hotel</h1>
-                  <p>Indochine Heritage Luxury • Phố Cổ Hà Nội</p>
+                  <h1>Khách Sạn Sương Mai</h1>
                 </div>
                 <div class="content">
                   <div class="greeting">Kính chào %s,</div>
-                  <div class="intro">
-                    Chào mừng Quý khách đến với Khách sạn Sương Mai. Tài khoản thành viên của Quý khách đã được khởi tạo thành công trên hệ thống của chúng tôi.
-                  </div>
+                  <p>Chào mừng Quý khách đến với Khách sạn Sương Mai. Tài khoản thành viên của Quý khách đã được khởi tạo thành công:</p>
 
                   <div class="card">
                     <div class="row">
                       <span class="label">Tên đăng nhập / Email:</span>
-                      <span class="value highlight-val">%s</span>
+                      <span class="value">%s</span>
                     </div>
                     <div class="row">
                       <span class="label">Thời gian kích hoạt:</span>
@@ -315,30 +294,117 @@ public class EmailService {
                     </div>
                     <div class="row">
                       <span class="label">Trạng thái tài khoản:</span>
-                      <span class="value"><span class="status-badge">✓ Đang hoạt động</span></span>
+                      <span class="value status-badge">Đang hoạt động</span>
                     </div>
                   </div>
 
-                  <div class="benefits">
-                    <strong style="color: #1C3328;">Đặc quyền dành riêng cho thành viên:</strong><br>
-                    • Đặt phòng trực tuyến nhanh chóng với thông tin lưu sẵn.<br>
-                    • Tận hưởng ưu đãi độc quyền và cập nhật các gói nghỉ dưỡng sớm nhất.<br>
-                    • Tra cứu lịch sử đặt phòng và hóa đơn lưu trú mọi lúc mọi nơi.
-                  </div>
-
-                  <p style="font-size: 13px; color: #6E6965; line-height: 1.5;">
+                  <p style="font-size: 13px; color: #6b7280;">
                     Quý khách có thể sử dụng email này cùng mật khẩu đã tạo để đăng nhập vào website bất cứ lúc nào.
                   </p>
                 </div>
                 <div class="footer">
                   <strong>Khách sạn Sương Mai</strong><br>
                   Địa chỉ: 45 Hàng Bè, Hoàn Kiếm, Hà Nội<br>
-                  Hotline hỗ trợ 24/7: 024 3828 9999 • Email: reservation@suongmaihotel.vn<br>
-                  <em>Hân hạnh được đồng hành cùng Quý khách trên hành trình di sản!</em>
+                  Hotline: 024 3828 9999 • Email: reservation@suongmaihotel.vn
                 </div>
               </div>
             </body>
             </html>
             """.formatted(name, email, registerTime);
+    }
+    /**
+     * Gửi email cấp mật khẩu tạm thời mới khi người dùng yêu cầu quên mật khẩu
+     */
+    public void sendTemporaryPasswordEmail(String toEmail, String customerName, String temporaryPassword) {
+        if (toEmail == null || toEmail.isBlank() || !toEmail.contains("@")) {
+            log.warn("Không thể gửi email mật khẩu mới: Địa chỉ email không hợp lệ ({})", toEmail);
+            return;
+        }
+
+        CompletableFuture.runAsync(() -> {
+            try {
+                String name = (customerName != null && !customerName.isBlank()) ? customerName : "Quý khách";
+                DateTimeFormatter dtf = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
+                String issueTime = java.time.LocalDateTime.now().format(dtf);
+
+                MimeMessage mimeMessage = mailSender.createMimeMessage();
+                MimeMessageHelper helper = new MimeMessageHelper(mimeMessage, true, "UTF-8");
+
+                helper.setFrom(fromEmail, "Khách Sạn Sương Mai");
+                helper.setTo(toEmail.trim());
+                helper.setSubject("[Sương Mai Hotel] Mật khẩu mới cho tài khoản của Quý khách");
+
+                String htmlContent = buildTemporaryPasswordEmailTemplate(name, toEmail.trim(), temporaryPassword, issueTime);
+                helper.setText(htmlContent, true);
+                mailSender.send(mimeMessage);
+                log.info("Đã gửi email mật khẩu tạm thời mới tới: {}", toEmail);
+            } catch (Exception e) {
+                log.error("Lỗi khi gửi email mật khẩu tạm thời tới {}: {}", toEmail, e.getMessage());
+            }
+        });
+    }
+
+    private String buildTemporaryPasswordEmailTemplate(String name, String email, String tempPassword, String issueTime) {
+        return """
+            <!DOCTYPE html>
+            <html lang="vi">
+            <head>
+              <meta charset="UTF-8">
+              <style>
+                body { font-family: Arial, Helvetica, sans-serif; color: #374151; background-color: #f9fafb; margin: 0; padding: 24px; font-size: 14px; line-height: 1.6; }
+                .container { max-width: 560px; margin: 0 auto; background: #ffffff; border: 1px solid #e5e7eb; border-radius: 8px; padding: 32px 28px; }
+                .header { border-bottom: 1px solid #e5e7eb; padding-bottom: 16px; margin-bottom: 24px; }
+                .header h1 { margin: 0; font-size: 20px; color: #111827; font-weight: 700; }
+                .greeting { font-size: 15px; font-weight: 600; color: #111827; margin-bottom: 12px; }
+                .card { background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 6px; padding: 18px; margin: 20px 0; }
+                .row { display: flex; justify-content: space-between; padding: 6px 0; font-size: 13px; }
+                .label { color: #6b7280; }
+                .value { color: #111827; font-weight: 600; text-align: right; }
+                .password-box { background: #ffffff; border: 1px solid #d1d5db; color: #111827; font-size: 20px; font-weight: 700; text-align: center; padding: 12px; border-radius: 6px; margin: 12px 0; font-family: monospace; letter-spacing: 1px; }
+                .notice { font-size: 13px; color: #6b7280; margin-top: 20px; }
+                .footer { border-top: 1px solid #e5e7eb; padding-top: 20px; margin-top: 28px; font-size: 12px; color: #9ca3af; line-height: 1.5; }
+              </style>
+            </head>
+            <body>
+              <div class="container">
+                <div class="header">
+                  <h1>Khách Sạn Sương Mai</h1>
+                </div>
+                <div class="content">
+                  <div class="greeting">Kính chào %s,</div>
+                  <p>Hệ thống đã nhận được yêu cầu cấp lại mật khẩu cho tài khoản của Quý khách. Dưới đây là mật khẩu tạm thời mới:</p>
+
+                  <div class="card">
+                    <div class="row">
+                      <span class="label">Tài khoản / Email:</span>
+                      <span class="value">%s</span>
+                    </div>
+                    <div style="margin-top: 10px;">
+                      <span class="label">Mật khẩu tạm thời:</span>
+                      <div class="password-box">%s</div>
+                    </div>
+                    <div class="row">
+                      <span class="label">Thời gian cấp:</span>
+                      <span class="value">%s</span>
+                    </div>
+                  </div>
+
+                  <div class="notice">
+                    <p style="margin: 0 0 8px 0;"><strong>Lưu ý:</strong></p>
+                    <ul style="margin: 0; padding-left: 18px;">
+                      <li>Vui lòng đăng nhập và đổi lại mật khẩu cá nhân tại phần thông tin tài khoản.</li>
+                      <li>Nếu Quý khách không gửi yêu cầu này, vui lòng liên hệ ngay với chúng tôi để được hỗ trợ.</li>
+                    </ul>
+                  </div>
+                </div>
+                <div class="footer">
+                  <strong>Khách sạn Sương Mai</strong><br>
+                  Địa chỉ: 45 Hàng Bè, Hoàn Kiếm, Hà Nội<br>
+                  Hotline: 024 3828 9999 • Email: reservation@suongmaihotel.vn
+                </div>
+              </div>
+            </body>
+            </html>
+            """.formatted(name, email, tempPassword, issueTime);
     }
 }

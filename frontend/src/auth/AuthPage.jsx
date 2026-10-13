@@ -16,6 +16,7 @@ import { validate } from "./validation";
 import {
   login,
   register,
+  forgotPassword,
   getCurrentProfile,
 } from "../services/authService";
 
@@ -44,8 +45,8 @@ const copy = {
     eyebrow: "LUÔN ĐỒNG HÀNH CÙNG BẠN",
     title: "Kết nối lại với\nnhững điều thân quen.",
     heading: "Quên mật khẩu?",
-    detail: "Nhập email tài khoản để bắt đầu khôi phục mật khẩu.",
-    submit: "Tiếp tục",
+    detail: "Nhập email tài khoản để nhận mật khẩu mới qua thư điện tử.",
+    submit: "Gửi mật khẩu mới",
     other: "Nhớ mật khẩu rồi?",
     link: "Về đăng nhập",
     to: "/dang-nhap",
@@ -64,6 +65,7 @@ export default function AuthPage({ mode }) {
   });
   const [touched, setTouched] = useState({});
   const [remember, setRemember] = useState(false);
+  const [forgotSent, setForgotSent] = useState(false);
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState("");
   const [noticeType, setNoticeType] = useState("info");
@@ -155,23 +157,26 @@ export default function AuthPage({ mode }) {
         return;
       }
 
-      // Forgot hiện chưa có API tương ứng,
-      // nên tạm giữ hành vi demo cũ.
       if (mode === "forgot") {
+        const result = await forgotPassword(values.email.trim());
         notify(
-          "Bản demo: email hợp lệ. Chưa gửi email khôi phục mật khẩu.",
+          result.message ||
+            "Mật khẩu mới đã được gửi về email của bạn. Vui lòng kiểm tra hộp thư.",
+          "success"
         );
+        setForgotSent(true);
+        return;
       } else if (mode === "register") {
-          await register(
-            values.email,
-            values.password,
-            values.confirm
-          );
+        await register(
+          values.email,
+          values.password,
+          values.confirm
+        );
 
-          navigate("/dang-nhap", { replace: true });
-          return;
+        navigate("/dang-nhap", { replace: true });
+        return;
       }
-          } catch (error) {
+    } catch (error) {
       const status = error.response?.status;
       const message = error.response?.data?.message;
 
@@ -230,6 +235,37 @@ export default function AuthPage({ mode }) {
         } else {
           notify(
             "Đăng nhập thất bại. Vui lòng thử lại.",
+            "error"
+          );
+        }
+      } else if (mode === "forgot") {
+        if (!error.response) {
+          notify(
+            "Không thể kết nối đến máy chủ. Vui lòng kiểm tra lại kết nối mạng.",
+            "error"
+          );
+        } else if (status === 404) {
+          notify(
+            message || "Không tìm thấy tài khoản liên kết với email này.",
+            "error"
+          );
+        } else if (status === 403) {
+          notify(
+            message || "Tài khoản này hiện đang bị khóa. Vui lòng liên hệ quản trị viên.",
+            "error"
+          );
+        } else if (status === 400) {
+          const fieldErrors = error.response.data?.errors;
+          const firstFieldError = fieldErrors
+            ? Object.values(fieldErrors)[0]
+            : null;
+          notify(
+            firstFieldError || message || "Email không hợp lệ.",
+            "error"
+          );
+        } else {
+          notify(
+            message || "Yêu cầu cấp lại mật khẩu thất bại. Vui lòng thử lại.",
             "error"
           );
         }
@@ -337,71 +373,107 @@ export default function AuthPage({ mode }) {
               {c.detail}
             </p>
 
-            <form
-              ref={form}
-              noValidate
-              onSubmit={submit}
-              aria-busy={busy}
-              className="space-y-5"
-            >
-              {mode === "login"
-                ? field("username", "Tên đăng nhập hoặc email", "username")
-                : field("email", "Email", "email")}
+            )}
 
-              {mode !== "forgot" &&
-                field(
-                  "password",
-                  "Mật khẩu",
-                  mode === "login" ? "current-password" : "new-password",
-                )}
-
-              {mode === "register" &&
-                field("confirm", "Xác nhận mật khẩu", "new-password")}
-
-              {mode === "login" && (
-                <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 text-xs text-text-secondary">
-                  <label className="flex min-h-11 cursor-pointer items-center gap-2">
-                    <input
-                      type="checkbox"
-                      checked={remember}
-                      disabled={busy}
-                      onChange={(e) => setRemember(e.target.checked)}
-                      className="size-4 accent-accent"
-                    />
-                    Ghi nhớ đăng nhập
-                  </label>
-
-                  <Link
-                    className="inline-flex min-h-11 items-center font-semibold text-primary transition-colors hover:text-accent"
-                    to="/quen-mat-khau"
-                  >
-                    Quên mật khẩu?
-                  </Link>
+            {mode === "forgot" && forgotSent ? (
+              <div className="space-y-4">
+                <div className="rounded-xl border border-success-custom/30 bg-success-custom/10 p-5 text-sm text-success-custom">
+                  <div className="flex items-center gap-2 font-bold mb-1.5 text-base">
+                    <Check size={20} className="shrink-0" />
+                    Đã gửi mật khẩu mới thành công!
+                  </div>
+                  <p className="text-xs leading-relaxed opacity-90">
+                    Hệ thống đã gửi một mật khẩu tạm thời ngẫu nhiên đến email <strong>{values.email}</strong>. 
+                    Quý khách vui lòng kiểm tra hộp thư đến (hoặc mục Thư rác/Spam) và sử dụng mật khẩu đó để đăng nhập.
+                  </p>
                 </div>
-              )}
 
-              <motion.button
-                type="submit"
-                disabled={busy}
-                whileTap={reduce ? undefined : { scale: 0.99 }}
-                className="flex min-h-[52px] w-full items-center justify-center gap-2 rounded-xl bg-accent px-4 text-sm font-bold text-primary shadow-[0_10px_24px_-14px_rgba(198,161,91,.8)] transition hover:bg-accent-hover disabled:cursor-wait disabled:opacity-65"
+                <Link
+                  to="/dang-nhap"
+                  className="flex min-h-[52px] w-full items-center justify-center gap-2 rounded-xl bg-accent px-4 text-sm font-bold text-primary shadow-[0_10px_24px_-14px_rgba(198,161,91,.8)] transition hover:bg-accent-hover"
+                >
+                  Đến trang Đăng nhập
+                  <ArrowRight size={17} />
+                </Link>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setForgotSent(false);
+                    setNotice("");
+                  }}
+                  className="w-full text-center text-xs font-medium text-text-secondary hover:text-primary transition-colors py-2"
+                >
+                  Thử lại với email khác
+                </button>
+              </div>
+            ) : (
+              <form
+                ref={form}
+                noValidate
+                onSubmit={submit}
+                aria-busy={busy}
+                className="space-y-5"
               >
-                {busy ? (
-                  <>
-                    <LoaderCircle
-                      size={18}
-                      className="animate-spin motion-reduce:animate-none"
-                    />
-                    Đang kiểm tra…
-                  </>
-                ) : (
-                  <>
-                    {c.submit}
-                    <ArrowRight size={17} />
-                  </>
+                {mode === "login"
+                  ? field("username", "Tên đăng nhập hoặc email", "username")
+                  : field("email", "Email", "email")}
+
+                {mode !== "forgot" &&
+                  field(
+                    "password",
+                    "Mật khẩu",
+                    mode === "login" ? "current-password" : "new-password",
+                  )}
+
+                {mode === "register" &&
+                  field("confirm", "Xác nhận mật khẩu", "new-password")}
+
+                {mode === "login" && (
+                  <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 text-xs text-text-secondary">
+                    <label className="flex min-h-11 cursor-pointer items-center gap-2">
+                      <input
+                        type="checkbox"
+                        checked={remember}
+                        disabled={busy}
+                        onChange={(e) => setRemember(e.target.checked)}
+                        className="size-4 accent-accent"
+                      />
+                      Ghi nhớ đăng nhập
+                    </label>
+
+                    <Link
+                      className="inline-flex min-h-11 items-center font-semibold text-primary transition-colors hover:text-accent"
+                      to="/quen-mat-khau"
+                    >
+                      Quên mật khẩu?
+                    </Link>
+                  </div>
                 )}
-              </motion.button>
-            </form>
+
+                <motion.button
+                  type="submit"
+                  disabled={busy}
+                  whileTap={reduce ? undefined : { scale: 0.99 }}
+                  className="flex min-h-[52px] w-full items-center justify-center gap-2 rounded-xl bg-accent px-4 text-sm font-bold text-primary shadow-[0_10px_24px_-14px_rgba(198,161,91,.8)] transition hover:bg-accent-hover disabled:cursor-wait disabled:opacity-65"
+                >
+                  {busy ? (
+                    <>
+                      <LoaderCircle
+                        size={18}
+                        className="animate-spin motion-reduce:animate-none"
+                      />
+                      Đang kiểm tra…
+                    </>
+                  ) : (
+                    <>
+                      {c.submit}
+                      <ArrowRight size={17} />
+                    </>
+                  )}
+                </motion.button>
+              </form>
+            )}
 
             <div
               ref={status}
@@ -444,9 +516,7 @@ export default function AuthPage({ mode }) {
             )}
 
             <p className="mt-3 text-center text-[10px] leading-5 text-text-secondary/70">
-              {mode === "login"
-                ? "Đăng nhập đã kết nối hệ thống tài khoản"
-                : "Bản xem thử giao diện · Chưa kết nối dịch vụ tài khoản"}
+              Hệ thống xác thực & bảo mật Sương Mai Hotel
             </p>
           </motion.section>
         </div>
