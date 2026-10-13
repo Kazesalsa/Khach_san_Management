@@ -10,6 +10,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.text.NumberFormat;
@@ -32,88 +33,97 @@ public class EmailService {
      * Gửi email xác nhận đặt phòng thành công sau khi thanh toán cọc PayOS
      * Chạy bất đồng bộ ngầm để không làm chậm luồng xử lý thanh toán
      */
+    @Transactional(readOnly = true)
     public void sendBookingConfirmationEmail(String toEmail, Booking booking) {
         if (toEmail == null || toEmail.isBlank() || !toEmail.contains("@")) {
             log.warn("Không thể gửi email xác nhận: Địa chỉ email không hợp lệ ({})", toEmail);
             return;
         }
 
-        CompletableFuture.runAsync(() -> {
-            try {
-                BookingDetail detail = bookingDetailRepository.findByBookingId(booking.getId())
-                        .stream().findFirst().orElse(null);
+        try {
+            // Trích xuất toàn bộ dữ liệu trên luồng chính khi Hibernate Session còn mở
+            String guestName = (booking.getCustomer() != null && booking.getCustomer().getHoTen() != null)
+                    ? booking.getCustomer().getHoTen()
+                    : "Quý khách";
+            String bookingCode = booking.getBookingCode();
 
-                String guestName = (booking.getCustomer() != null && booking.getCustomer().getHoTen() != null)
-                        ? booking.getCustomer().getHoTen()
-                        : "Quý khách";
+            String roomInfo = "Phòng tiêu chuẩn Sương Mai";
+            String checkIn = "Hôm nay";
+            String checkOut = "Ngày mai";
+            String guests = "2 người lớn";
 
-                String roomInfo = "Phòng tiêu chuẩn Sương Mai";
-                String checkIn = "Hôm nay";
-                String checkOut = "Ngày mai";
-                String guests = "2 người lớn";
+            BookingDetail detail = bookingDetailRepository.findByBookingId(booking.getId())
+                    .stream().findFirst().orElse(null);
 
-                if (detail != null) {
-                    if (detail.getRoom() != null) {
-                        String catName = detail.getRoom().getRoomCategory() != null
-                                ? detail.getRoom().getRoomCategory().getName()
-                                : "";
-                        String roomNum = detail.getRoom().getRoomNumber() != null
-                                ? " (Phòng " + detail.getRoom().getRoomNumber() + ")"
-                                : "";
-                        roomInfo = catName + roomNum;
-                    }
-                    DateTimeFormatter dtf = DateTimeFormatter.ofPattern("dd/MM/yyyy");
-                    if (detail.getExpectedCheckInDate() != null) {
-                        checkIn = detail.getExpectedCheckInDate().format(dtf);
-                    }
-                    if (detail.getExpectedCheckOutDate() != null) {
-                        checkOut = detail.getExpectedCheckOutDate().format(dtf);
-                    }
-                    if (detail.getGuestCount() != null) {
-                        guests = detail.getGuestCount() + " khách";
-                    }
+            if (detail != null) {
+                if (detail.getRoom() != null) {
+                    String catName = (detail.getRoom().getRoomCategory() != null && detail.getRoom().getRoomCategory().getName() != null)
+                            ? detail.getRoom().getRoomCategory().getName()
+                            : "";
+                    String roomNum = detail.getRoom().getRoomNumber() != null
+                            ? " (Phòng " + detail.getRoom().getRoomNumber() + ")"
+                            : "";
+                    roomInfo = (catName + roomNum).trim();
                 }
-
-                NumberFormat currencyFormat = NumberFormat.getInstance(new Locale("vi", "VN"));
-                String depositStr = booking.getRequiredDeposit() != null
-                        ? currencyFormat.format(booking.getRequiredDeposit()) + " đ"
-                        : "Đã thanh toán";
-                String totalStr = booking.getEstimatedTotal() != null
-                        ? currencyFormat.format(booking.getEstimatedTotal()) + " đ"
-                        : "0 đ";
-
-                BigDecimal remaining = BigDecimal.ZERO;
-                if (booking.getEstimatedTotal() != null && booking.getRequiredDeposit() != null) {
-                    remaining = booking.getEstimatedTotal().subtract(booking.getRequiredDeposit()).max(BigDecimal.ZERO);
+                DateTimeFormatter dtf = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+                if (detail.getExpectedCheckInDate() != null) {
+                    checkIn = detail.getExpectedCheckInDate().format(dtf);
                 }
-                String remainingStr = currencyFormat.format(remaining) + " đ";
-
-                MimeMessage mimeMessage = mailSender.createMimeMessage();
-                MimeMessageHelper helper = new MimeMessageHelper(mimeMessage, true, "UTF-8");
-
-                helper.setFrom(fromEmail, "Khách Sạn Sương Mai");
-                helper.setTo(toEmail.trim());
-                helper.setSubject("🌿 [Sương Mai Hotel] Xác nhận đặt phòng thành công - Mã " + booking.getBookingCode());
-
-                String htmlContent = buildEmailTemplate(
-                        guestName,
-                        booking.getBookingCode(),
-                        roomInfo,
-                        checkIn,
-                        checkOut,
-                        guests,
-                        depositStr,
-                        totalStr,
-                        remainingStr
-                );
-
-                helper.setText(htmlContent, true);
-                mailSender.send(mimeMessage);
-                log.info("Đã gửi email xác nhận đặt phòng thành công tới: {}", toEmail);
-            } catch (Exception e) {
-                log.error("Lỗi khi gửi email xác nhận đặt phòng cho mã {}: {}", booking.getBookingCode(), e.getMessage());
+                if (detail.getExpectedCheckOutDate() != null) {
+                    checkOut = detail.getExpectedCheckOutDate().format(dtf);
+                }
+                if (detail.getGuestCount() != null) {
+                    guests = detail.getGuestCount() + " khách";
+                }
             }
-        });
+
+            NumberFormat currencyFormat = NumberFormat.getInstance(new Locale("vi", "VN"));
+            String depositStr = booking.getRequiredDeposit() != null
+                    ? currencyFormat.format(booking.getRequiredDeposit()) + " đ"
+                    : "Đã thanh toán";
+            String totalStr = booking.getEstimatedTotal() != null
+                    ? currencyFormat.format(booking.getEstimatedTotal()) + " đ"
+                    : "0 đ";
+
+            BigDecimal remaining = BigDecimal.ZERO;
+            if (booking.getEstimatedTotal() != null && booking.getRequiredDeposit() != null) {
+                remaining = booking.getEstimatedTotal().subtract(booking.getRequiredDeposit()).max(BigDecimal.ZERO);
+            }
+            String remainingStr = currencyFormat.format(remaining) + " đ";
+
+            // Soạn sẵn toàn bộ nội dung HTML
+            String htmlContent = buildEmailTemplate(
+                    guestName,
+                    bookingCode,
+                    roomInfo,
+                    checkIn,
+                    checkOut,
+                    guests,
+                    depositStr,
+                    totalStr,
+                    remainingStr
+            );
+
+            // Gửi email bất đồng bộ ngầm qua SMTP với các chuỗi String thuần (không chạm vào JPA proxy)
+            CompletableFuture.runAsync(() -> {
+                try {
+                    MimeMessage mimeMessage = mailSender.createMimeMessage();
+                    MimeMessageHelper helper = new MimeMessageHelper(mimeMessage, true, "UTF-8");
+
+                    helper.setFrom(fromEmail, "Khách Sạn Sương Mai");
+                    helper.setTo(toEmail.trim());
+                    helper.setSubject("🌿 [Sương Mai Hotel] Xác nhận đặt phòng thành công - Mã " + bookingCode);
+                    helper.setText(htmlContent, true);
+
+                    mailSender.send(mimeMessage);
+                    log.info("Đã gửi email xác nhận đặt phòng thành công tới: {}", toEmail);
+                } catch (Exception e) {
+                    log.error("Lỗi khi gửi email xác nhận đặt phòng cho mã {}: {}", bookingCode, e.getMessage());
+                }
+            });
+        } catch (Exception e) {
+            log.error("Lỗi khi chuẩn bị dữ liệu gửi email cho mã {}: {}", booking.getBookingCode(), e.getMessage());
+        }
     }
 
     private String buildEmailTemplate(String guestName, String bookingCode, String roomInfo,

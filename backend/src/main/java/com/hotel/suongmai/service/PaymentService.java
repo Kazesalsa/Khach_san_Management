@@ -65,6 +65,14 @@ public class PaymentService {
 
         if (booking == null) {
             booking = createBookingFromDepositRequest(request, username);
+        } else {
+            if (booking.getCustomer() != null && request.getEmail() != null && !request.getEmail().isBlank()) {
+                KhachHang c = booking.getCustomer();
+                if (c.getEmail() == null || !c.getEmail().equalsIgnoreCase(request.getEmail().trim())) {
+                    c.setEmail(request.getEmail().trim());
+                    khachHangRepository.save(c);
+                }
+            }
         }
 
         BigDecimal depositAmount = request.getDepositAmount();
@@ -296,13 +304,17 @@ public class PaymentService {
 
         Booking booking = thanhToan.getBooking();
         if (booking != null) {
-            if (thanhToan.getTransactionType() == LoaiGiaoDich.TIEN_COC && booking.getStatus() == BookingStatus.CHO_XAC_NHAN) {
-                booking.setStatus(BookingStatus.DA_DAT);
-                bookingRepository.save(booking);
-                log.info("Cập nhật booking {} sang trạng thái DA_DAT sau khi thanh toán cọc thành công", booking.getBookingCode());
+            if (thanhToan.getTransactionType() == LoaiGiaoDich.TIEN_COC) {
+                if (booking.getStatus() == BookingStatus.CHO_XAC_NHAN) {
+                    booking.setStatus(BookingStatus.DA_DAT);
+                    bookingRepository.save(booking);
+                    log.info("Cập nhật booking {} sang trạng thái DA_DAT sau khi thanh toán cọc thành công", booking.getBookingCode());
+                }
 
-                if (booking.getCustomer() != null && booking.getCustomer().getEmail() != null) {
+                if (booking.getCustomer() != null && booking.getCustomer().getEmail() != null && !booking.getCustomer().getEmail().isBlank()) {
                     emailService.sendBookingConfirmationEmail(booking.getCustomer().getEmail(), booking);
+                } else {
+                    log.warn("Booking {} không có email khách hàng để gửi thư xác nhận", booking.getBookingCode());
                 }
             } else if (thanhToan.getTransactionType() == LoaiGiaoDich.THANH_TOAN_HOA_DON) {
                 HoaDon invoice = thanhToan.getInvoice();
@@ -376,14 +388,35 @@ public class PaymentService {
                 : "SM-" + (100000 + (int)(Math.random() * 900000));
 
         String phone = (request.getPhone() != null && !request.getPhone().isBlank()) ? request.getPhone().trim() : "0900000000";
-        KhachHang customer = khachHangRepository.findBySoDienThoai(phone).orElseGet(() -> {
-            KhachHang kh = new KhachHang();
-            kh.setHoTen(request.getGuestName() != null ? request.getGuestName().trim() : "Khách Lưu Trú");
-            kh.setSoDienThoai(phone);
-            kh.setEmail(request.getEmail());
-            kh.setNgayTao(LocalDateTime.now());
-            return khachHangRepository.save(kh);
-        });
+        KhachHang customer = null;
+        if (request.getPhone() != null && !request.getPhone().isBlank()) {
+            customer = khachHangRepository.findBySoDienThoai(request.getPhone().trim()).orElse(null);
+        }
+        if (customer == null && request.getEmail() != null && !request.getEmail().isBlank()) {
+            customer = khachHangRepository.findByEmail(request.getEmail().trim()).orElse(null);
+        }
+
+        if (customer == null) {
+            customer = new KhachHang();
+            customer.setHoTen(request.getGuestName() != null && !request.getGuestName().isBlank() ? request.getGuestName().trim() : "Khách Lưu Trú");
+            customer.setSoDienThoai(phone);
+            customer.setEmail(request.getEmail() != null && !request.getEmail().isBlank() ? request.getEmail().trim() : null);
+            customer.setNgayTao(LocalDateTime.now());
+            customer = khachHangRepository.save(customer);
+        } else {
+            boolean changed = false;
+            if (request.getEmail() != null && !request.getEmail().isBlank() && (customer.getEmail() == null || !customer.getEmail().equalsIgnoreCase(request.getEmail().trim()))) {
+                customer.setEmail(request.getEmail().trim());
+                changed = true;
+            }
+            if (request.getGuestName() != null && !request.getGuestName().isBlank() && (customer.getHoTen() == null || customer.getHoTen().isBlank() || "Khách Lưu Trú".equals(customer.getHoTen()))) {
+                customer.setHoTen(request.getGuestName().trim());
+                changed = true;
+            }
+            if (changed) {
+                customer = khachHangRepository.save(customer);
+            }
+        }
 
         Booking booking = new Booking();
         booking.setBookingCode(code);
