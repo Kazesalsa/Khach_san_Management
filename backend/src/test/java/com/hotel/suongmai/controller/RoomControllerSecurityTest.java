@@ -18,8 +18,11 @@ import org.springframework.dao.DataAccessResourceFailureException;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.test.web.servlet.MockMvc;
 
+import java.util.List;
+
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -29,6 +32,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class RoomControllerSecurityTest {
 
     private static final String ENDPOINT = "/api/rooms/P101/cleaning-status";
+    private static final String ROOMS_ENDPOINT = "/api/rooms";
 
     @Autowired
     private MockMvc mockMvc;
@@ -91,7 +95,63 @@ class RoomControllerSecurityTest {
                 .andExpect(jsonPath("$.roomNumber").value("101"))
                 .andExpect(jsonPath("$.cleaningStatus").value("DA_DON_XONG"))
                 .andExpect(jsonPath("$.message")
-                        .value("Cập nhật trạng thái phòng thành công"));
+                        .value("Đã đánh dấu thành công cho phòng P101"));
+    }
+
+    @Test
+    void rejectsRoomsRequestWithoutToken() throws Exception {
+        mockMvc.perform(get(ROOMS_ENDPOINT))
+                .andExpect(status().isUnauthorized());
+
+        verifyNoInteractions(roomService);
+    }
+
+    @Test
+    void rejectsRoomsRequestForCustomerRole() throws Exception {
+        authenticate("customer-token", "khach1", VaiTro.KHACH_HANG);
+
+        mockMvc.perform(get(ROOMS_ENDPOINT)
+                        .header("Authorization", "Bearer customer-token"))
+                .andExpect(status().isForbidden());
+
+        verifyNoInteractions(roomService);
+    }
+
+    @Test
+    void housekeepingEmployeeCanGetRooms() throws Exception {
+        assertRoleCanGetRooms("housekeeping-token", "buong1", VaiTro.NHAN_VIEN_BUONG);
+    }
+
+    @Test
+    void receptionistCanGetRooms() throws Exception {
+        assertRoleCanGetRooms("reception-token", "letan1", VaiTro.LE_TAN);
+    }
+
+    @Test
+    void hotelOwnerCanGetRooms() throws Exception {
+        assertRoleCanGetRooms("owner-token", "admin", VaiTro.CHU_KHACH_SAN);
+    }
+
+    private void assertRoleCanGetRooms(String token, String username, VaiTro role) throws Exception {
+        authenticate(token, username, role);
+        RoomCategory category = new RoomCategory();
+        category.setName("Standard");
+        Room room = room("P101", CleaningStatus.CHUA_DON);
+        room.setFloor(1);
+        room.setRoomCategory(category);
+        room.setUsageStatus(UsageStatus.DANG_O);
+        when(roomService.findAllRooms()).thenReturn(List.of(room));
+
+        mockMvc.perform(get(ROOMS_ENDPOINT)
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].id").value("room-id"))
+                .andExpect(jsonPath("$[0].roomCode").value("P101"))
+                .andExpect(jsonPath("$[0].roomNumber").value("101"))
+                .andExpect(jsonPath("$[0].floor").value(1))
+                .andExpect(jsonPath("$[0].roomType").value("Standard"))
+                .andExpect(jsonPath("$[0].cleaningStatus").value("CHUA_DON"))
+                .andExpect(jsonPath("$[0].usageStatus").value("DANG_O"));
     }
 
     @Test
