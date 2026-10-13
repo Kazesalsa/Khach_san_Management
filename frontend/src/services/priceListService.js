@@ -27,6 +27,15 @@ export const getRoomCategories = async () => {
   return response.data;
 };
 
+export const getPriceLists = async () => {
+  const response = await axios.get(
+    `${API_BASE}/price-lists`,
+    getAuthConfig()
+  );
+
+  return response.data;
+};
+
 export const createPriceList = async (data) => {
   const response = await axios.post(
     `${API_BASE}/price-lists`,
