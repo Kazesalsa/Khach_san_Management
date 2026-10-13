@@ -10,4 +10,5 @@ import java.util.Optional;
 public interface NhanVienRepository extends JpaRepository<NhanVien, String> {
     Optional<NhanVien> findByTaiKhoanId(String taiKhoanId);
     Optional<NhanVien> findByTaiKhoan_TenDangNhap(String tenDangNhap);
+    Optional<NhanVien> findByEmailIgnoreCase(String email);
 }
