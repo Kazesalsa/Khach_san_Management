@@ -32,7 +32,7 @@ function CheckoutModal({ room, onClose, onConfirmed }) {
 
   if (!room) return null;
 
-  const remaining = room.totalAmount - room.depositPaid;
+  const remaining = Math.max(room.totalAmount - room.depositPaid, 0);
   const hasUnpaid = room.paymentStatus === 'unpaid' && remaining > 0;
   const daysLeft  = getDaysLeft(room.checkOut);
 
@@ -104,8 +104,8 @@ function CheckoutModal({ room, onClose, onConfirmed }) {
         {done ? (
           /* ── Success state ── */
           <div className="p-8 flex flex-col items-center text-center">
-            <div className="w-14 h-14 rounded-full bg-emerald-100 border border-emerald-300 flex items-center justify-center mb-4">
-              <span className="material-symbols-outlined text-[32px] text-emerald-700">check_circle</span>
+            <div className="w-14 h-14 rounded-full bg-emerald-100 border border-emerald-300 flex items-center justify-center mb-4 text-emerald-700 font-bold text-2xl">
+              ✓
             </div>
             <h3 className="text-xl font-bold text-primary mb-2">Trả phòng thành công!</h3>
             <p className="text-sm text-text-secondary mb-1">
@@ -130,7 +130,7 @@ function CheckoutModal({ room, onClose, onConfirmed }) {
                 onClick={onClose}
                 className="w-8 h-8 rounded-lg bg-surface-alt hover:bg-border-custom flex items-center justify-center text-text-secondary hover:text-primary transition-colors shrink-0"
               >
-                <span className="material-symbols-outlined text-[20px]">close</span>
+                <span className="font-bold text-base leading-none">✕</span>
               </button>
             </div>
 
@@ -168,35 +168,41 @@ function CheckoutModal({ room, onClose, onConfirmed }) {
               {/* Bảng tiền */}
               <div className="bg-background rounded-xl border border-border-custom p-4 space-y-2.5 text-sm">
                 <div className="flex justify-between text-text-secondary">
-                  <span>Tổng tiền phòng</span>
+                  <span>Tiền phòng</span>
+                  <span className="font-semibold text-primary">{formatVND(room.roomFee ?? room.totalAmount)}</span>
+                </div>
+                {room.serviceFee > 0 && (
+                  <div className="flex justify-between text-text-secondary">
+                    <span>Dịch vụ phát sinh</span>
+                    <span className="font-semibold text-primary">{formatVND(room.serviceFee)}</span>
+                  </div>
+                )}
+                <div className="flex justify-between text-text-secondary border-t border-border-custom/50 pt-2">
+                  <span>Tổng cộng</span>
                   <span className="font-semibold text-primary">{formatVND(room.totalAmount)}</span>
                 </div>
                 <div className="flex justify-between text-text-secondary">
-                  <span>Đã thanh toán cọc</span>
+                  <span>Đã thanh toán trước (cọc)</span>
                   <span className="font-semibold text-success-custom">{formatVND(room.depositPaid)}</span>
                 </div>
                 <div className={`flex justify-between border-t border-border-custom pt-2.5 font-bold ${hasUnpaid ? 'text-amber-600' : 'text-success-custom'}`}>
                   <span>{hasUnpaid ? 'Còn phải thu' : 'Đã thanh toán đủ'}</span>
-                  <span>{hasUnpaid ? formatVND(remaining) : '✓ Hoàn tất'}</span>
+                  <span>{hasUnpaid ? formatVND(remaining) : 'Hoàn tất'}</span>
                 </div>
               </div>
 
               {/* Cảnh báo chưa thanh toán & Nút thanh toán PayOS */}
               {hasUnpaid && (
                 <div className="space-y-3">
-                  <div className="flex items-start gap-3 p-3.5 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-800">
-                    <span className="material-symbols-outlined text-amber-500 text-[20px] shrink-0 mt-0.5">warning</span>
-                    <div>
-                      <p className="font-bold mb-0.5">Khách chưa thanh toán đủ</p>
-                      <p>Còn <strong>{formatVND(remaining)}</strong> chưa được thu. Vui lòng thanh toán qua cổng PayOS trước khi xác nhận trả phòng.</p>
-                    </div>
+                  <div className="p-3.5 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-800">
+                    <p className="font-bold mb-0.5">Khách chưa thanh toán đủ</p>
+                    <p>Còn <strong>{formatVND(remaining)}</strong> chưa được thu. Vui lòng thanh toán qua cổng PayOS trước khi xác nhận trả phòng.</p>
                   </div>
 
                   <Button
                     variant="primary"
                     size="md"
                     fullWidth
-                    iconLeft="qr_code_scanner"
                     isLoading={payingPayOS}
                     onClick={handlePayOS}
                   >
@@ -207,9 +213,8 @@ function CheckoutModal({ room, onClose, onConfirmed }) {
 
               {/* Lỗi API */}
               {error && (
-                <div className="flex items-start gap-2 p-3 bg-rose-50 border border-rose-200 rounded-xl text-xs text-danger-custom">
-                  <span className="material-symbols-outlined text-[18px] shrink-0">error</span>
-                  <span>{error}</span>
+                <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-xs text-danger-custom">
+                  {error}
                 </div>
               )}
 
@@ -221,7 +226,6 @@ function CheckoutModal({ room, onClose, onConfirmed }) {
                 <Button
                   variant="secondary"
                   size="md"
-                  iconLeft={busy ? undefined : 'logout'}
                   isLoading={busy}
                   isDisabled={hasUnpaid}
                   onClick={handleConfirm}
@@ -232,8 +236,7 @@ function CheckoutModal({ room, onClose, onConfirmed }) {
               </div>
 
               {hasUnpaid && (
-                <p className="text-center text-[11px] text-amber-600 flex items-center justify-center gap-1">
-                  <span className="material-symbols-outlined text-[14px]">lock</span>
+                <p className="text-center text-[11px] text-amber-600">
                   Nút bị khóa vì còn khoản phí chưa thanh toán
                 </p>
               )}
@@ -248,7 +251,7 @@ function CheckoutModal({ room, onClose, onConfirmed }) {
 // ─── Room Card ────────────────────────────────────────────────────────────────
 function RoomCard({ room, onOpenCheckout, onOpenInvoice }) {
   const daysLeft  = getDaysLeft(room.checkOut);
-  const remaining = room.totalAmount - room.depositPaid;
+  const remaining = Math.max(room.totalAmount - room.depositPaid, 0);
 
   return (
     <div
@@ -458,6 +461,8 @@ export default function CheckoutListPage() {
           checkIn,
           checkOut,
           nights,
+          roomFee: Number(item.roomFee ?? item.totalAmount ?? 0),
+          serviceFee: Number(item.serviceFee ?? 0),
           totalAmount: Number(item.totalAmount ?? 0),
           depositPaid: Number(item.paidAmount ?? 0),
           paymentStatus: item.paymentStatus,
@@ -537,8 +542,7 @@ export default function CheckoutListPage() {
               to="/"
               className="inline-flex items-center gap-2 rounded-xl border border-white/20 px-3 sm:px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-white/10 shrink-0"
             >
-              <span className="material-symbols-outlined text-[18px]">arrow_back</span>
-              <span className="hidden sm:inline">Về trang chủ</span>
+              Về trang chủ
             </Link>
           </div>
         </div>
@@ -581,17 +585,16 @@ export default function CheckoutListPage() {
         <div className="bg-surface rounded-2xl border border-border-custom shadow-sm p-5">
           <div className="flex flex-col sm:flex-row gap-3">
             <div className="flex-1 relative">
-              <span className="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-text-secondary text-[20px]">search</span>
               <input
                 type="text"
                 placeholder="Tìm theo số phòng, tên khách hoặc mã đặt phòng..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="w-full bg-background border border-border-custom rounded-xl pl-10 pr-4 py-2.5 text-sm text-text-primary placeholder:text-text-secondary/60 focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20"
+                className="w-full bg-background border border-border-custom rounded-xl px-4 py-2.5 text-sm text-text-primary placeholder:text-text-secondary/60 focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20"
               />
               {search && (
                 <button onClick={() => setSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-text-secondary hover:text-primary">
-                  <span className="material-symbols-outlined text-[18px]">close</span>
+                  <span className="font-semibold text-sm">✕</span>
                 </button>
               )}
             </div>
@@ -638,15 +641,14 @@ export default function CheckoutListPage() {
         {/* Danh sách */}
         {loading ? (
           <div className="bg-surface rounded-2xl border border-border-custom shadow-sm p-14 flex flex-col items-center justify-center text-center gap-3">
-            <span className="material-symbols-outlined text-4xl text-accent animate-spin">progress_activity</span>
+            <div className="w-10 h-10 border-4 border-accent/20 border-t-accent rounded-full animate-spin"></div>
             <p className="text-sm font-medium text-text-secondary">Đang tải danh sách phòng...</p>
           </div>
         ) : filtered.length === 0 ? (
           <div className="bg-surface rounded-2xl border border-border-custom shadow-sm p-14 flex flex-col items-center text-center gap-3">
-            <span className="material-symbols-outlined text-5xl text-text-secondary/30">search_off</span>
             <h3 className="font-headline text-xl font-bold text-primary">Không tìm thấy kết quả</h3>
             <p className="text-text-secondary text-sm max-w-sm">Không có phòng nào khớp với bộ lọc hiện tại.</p>
-            <Button variant="outline" size="sm" iconLeft="refresh" onClick={() => { setSearch(''); setFilterStatus('all'); setFilterFloor('all'); }}>
+            <Button variant="outline" size="sm" onClick={() => { setSearch(''); setFilterStatus('all'); setFilterFloor('all'); }}>
               Xóa bộ lọc
             </Button>
           </div>

@@ -96,10 +96,6 @@ public class BillingService {
 
         InvoiceCalculation calculation = calculateInvoice(booking);
 
-        if (calculation.remaining().compareTo(BigDecimal.ZERO) <= 0) {
-            throw new IllegalArgumentException("Booking không còn số tiền cần thanh toán");
-        }
-
         HoaDon invoice = new HoaDon();
         invoice.setInvoiceNumber(generateUniqueInvoiceNumber());
         invoice.setBooking(booking);
@@ -112,17 +108,20 @@ public class BillingService {
 
         invoice = hoaDonRepository.save(invoice);
 
-        ThanhToan payment = new ThanhToan();
-        payment.setTransactionType(LoaiGiaoDich.THANH_TOAN_HOA_DON);
-        payment.setAmount(calculation.remaining());
-        payment.setPaymentMethod(request.paymentMethod());
-        payment.setStatus(TrangThaiThanhToan.THANH_CONG);
-        payment.setReferenceCode(generatePaymentReference());
-        payment.setBooking(booking);
-        payment.setInvoice(invoice);
-        payment.setCashierStaff(cashier);
+        BigDecimal remainingToPay = calculation.remaining().max(BigDecimal.ZERO);
+        if (remainingToPay.compareTo(BigDecimal.ZERO) > 0) {
+            ThanhToan payment = new ThanhToan();
+            payment.setTransactionType(LoaiGiaoDich.THANH_TOAN_HOA_DON);
+            payment.setAmount(remainingToPay);
+            payment.setPaymentMethod(request.paymentMethod());
+            payment.setStatus(TrangThaiThanhToan.THANH_CONG);
+            payment.setReferenceCode(generatePaymentReference());
+            payment.setBooking(booking);
+            payment.setInvoice(invoice);
+            payment.setCashierStaff(cashier);
 
-        thanhToanRepository.save(payment);
+            thanhToanRepository.save(payment);
+        }
 
         return new InvoicePaymentResponse(
                 bookingCode,
@@ -131,9 +130,9 @@ public class BillingService {
                 invoice.getServiceFee(),
                 invoice.getTotalAmount(),
                 invoice.getDeductedDeposit(),
-                payment.getAmount(),
+                remainingToPay,
                 invoice.getRemainingAmount(),
-                payment.getPaymentMethod(),
+                request.paymentMethod(),
                 invoice.getStatus(),
                 "Thanh toán hóa đơn thành công"
         );
