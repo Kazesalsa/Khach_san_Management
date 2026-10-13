@@ -33,7 +33,7 @@ public interface BookingDetailRepository extends JpaRepository<BookingDetail, St
     @Query("SELECT bd.room.id FROM BookingDetail bd " +
             "WHERE bd.expectedCheckInDate < :checkOut " +
             "AND bd.expectedCheckOutDate > :checkIn " +
-            "AND bd.booking.status IN ('CHO_XAC_NHAN', 'DA_DAT', 'DA_NHAN')")
+            "AND CAST(bd.booking.status AS string) IN ('CHO_XAC_NHAN', 'DA_DAT', 'DA_NHAN')")
     List<String> findBookedRoomIdsOverlapping(@Param("checkIn") LocalDate checkIn,
                                                @Param("checkOut") LocalDate checkOut);
 
@@ -69,7 +69,7 @@ public interface BookingDetailRepository extends JpaRepository<BookingDetail, St
             "JOIN FETCH r.roomCategory " +
             "JOIN FETCH bd.booking b " +
             "JOIN FETCH b.customer " +
-            "WHERE b.status = com.hotel.suongmai.entity.BookingStatus.DA_NHAN " +
+            "WHERE CAST(b.status AS string) = 'DA_NHAN' " +
             "AND bd.actualCheckInTime IS NOT NULL " +
             "AND bd.actualCheckOutTime IS NULL " +
             "ORDER BY r.roomNumber")
