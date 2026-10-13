@@ -50,6 +50,6 @@ public class ThanhToan {
     private HoaDon invoice;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "nhan_vien_thu_id", nullable = false)
+    @JoinColumn(name = "nhan_vien_thu_id", nullable = true)
     private NhanVien cashierStaff;
 }

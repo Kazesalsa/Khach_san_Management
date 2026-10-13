@@ -15,6 +15,8 @@ import java.util.Optional;
 @Repository
 public interface RoomRepository extends JpaRepository<Room, String> {
     Optional<Room> findByRoomCode(String roomCode);
+    Optional<Room> findByRoomNumber(String roomNumber);
+    List<Room> findByRoomCategory_Id(String categoryId);
     List<Room> findByUsageStatusAndCleaningStatus(UsageStatus usageStatus, CleaningStatus cleaningStatus);
     List<Room> findAllByOrderByFloorAscRoomNumberAsc();
 

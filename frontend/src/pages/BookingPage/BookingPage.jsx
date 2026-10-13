@@ -6,6 +6,7 @@ import Button from '../../components/ui/Button';
 import Badge from '../../components/ui/Badge';
 import DatePicker from '../../components/ui/DatePicker';
 import { ROOMS_DATA } from '../../data/roomsData';
+import { createDepositPayment, redirectToPayOS } from '../../services/paymentService';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 const formatVND = (n) =>
@@ -173,16 +174,43 @@ export default function BookingPage() {
     return Object.keys(e).length === 0;
   };
 
-  const handleSubmit = (ev) => {
+  const handleSubmit = async (ev) => {
     ev.preventDefault();
     if (!validate()) return;
     setBusy(true);
-    setTimeout(() => {
-      const code = 'SM-' + Math.floor(100000 + Math.random() * 900000);
-      setBookingRef(code);
+
+    const code = 'SM-' + Math.floor(100000 + Math.random() * 900000);
+    setBookingRef(code);
+
+    try {
+      // 1. Gửi yêu cầu tạo giao dịch thanh toán đặt cọc qua cổng PayOS
+      const paymentRes = await createDepositPayment({
+        bookingCode: code,
+        roomCategoryId: room.categoryId || room.category,
+        roomId: room.id,
+        roomName: room.name,
+        checkIn,
+        checkOut,
+        guestName,
+        phone,
+        email,
+        adults,
+        children,
+        totalAmount: subtotal,
+        depositAmount: deposit,
+      });
+
+      if (paymentRes?.checkoutUrl) {
+        // [PAYOS GATEWAY]: Chuyển hướng trực tiếp sang trang thanh toán PayOS
+        redirectToPayOS(paymentRes.checkoutUrl);
+        return;
+      }
+      throw new Error('Không nhận được liên kết thanh toán từ cổng PayOS');
+    } catch (err) {
+      console.warn('Không thể chuyển sang PayOS, hiển thị modal thông báo:', err);
       setBusy(false);
       setShowSuccess(true);
-    }, 1200);
+    }
   };
 
   const handleSuccessClose = () => {
@@ -480,9 +508,9 @@ export default function BookingPage() {
                   size="lg"
                   fullWidth
                   isLoading={busy}
-                  iconRight={busy ? undefined : 'arrow_forward'}
+                  iconRight={busy ? undefined : 'qr_code_scanner'}
                 >
-                  {busy ? 'Đang xử lý…' : 'Xác nhận đặt phòng'}
+                  {busy ? 'Đang chuyển hướng sang PayOS…' : `Xác nhận & Thanh toán cọc PayOS (${formatVND(deposit)})`}
                 </Button>
 
                 <p className="text-center text-[10px] text-text-secondary mt-3 leading-5">

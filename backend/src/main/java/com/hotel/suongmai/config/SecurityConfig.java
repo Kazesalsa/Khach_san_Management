@@ -73,6 +73,7 @@ public class SecurityConfig {
                     .requestMatchers(HttpMethod.POST, "/api/auth/login").permitAll()
                     .requestMatchers(HttpMethod.POST, "/api/auth/register").permitAll()
                     .requestMatchers(HttpMethod.GET, "/api/rooms/available").permitAll()
+                    .requestMatchers("/api/payment/**").permitAll()
                     .requestMatchers("/api/test").permitAll()
                     .requestMatchers("/error").permitAll()
                     // Tất cả các API còn lại đều phải có JWT Token hợp lệ
