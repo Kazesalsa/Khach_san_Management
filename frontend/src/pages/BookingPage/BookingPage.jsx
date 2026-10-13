@@ -5,8 +5,8 @@ import { Input } from '../../components/ui/Input';
 import Button from '../../components/ui/Button';
 import Badge from '../../components/ui/Badge';
 import DatePicker from '../../components/ui/DatePicker';
-import { ROOMS_DATA } from '../../data/roomsData';
 import { createDepositPayment, redirectToPayOS } from '../../services/paymentService';
+import { getPublicRoomDetail } from '../../services/roomService';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 const formatVND = (n) =>
@@ -126,11 +126,60 @@ export default function BookingPage() {
   const today    = new Date().toISOString().split('T')[0];
   const tomorrow = new Date(Date.now() + 86400000).toISOString().split('T')[0];
 
-  // Tìm phòng từ data, fallback về phòng đầu tiên nếu không tìm thấy
-  const room = useMemo(
-    () => ROOMS_DATA.find((r) => r.id === roomId) || ROOMS_DATA[0],
-    [roomId]
-  );
+  const [room, setRoom] = useState(null);
+  const [loadingRoom, setLoadingRoom] = useState(true);
+
+  useEffect(() => {
+    let mounted = true;
+    if (roomId) {
+      getPublicRoomDetail(roomId).then((dbRoom) => {
+        if (mounted && dbRoom) {
+          const categorySlug = dbRoom.categoryId === 'cat-4' ? 'president' :
+                               dbRoom.categoryId === 'cat-3' ? 'deluxe' :
+                               dbRoom.categoryId === 'cat-2' ? 'indochine-suite' : 'deluxe';
+          setRoom({
+            id: dbRoom.id,
+            slug: dbRoom.roomCode?.toLowerCase() || dbRoom.id,
+            categoryId: dbRoom.categoryId,
+            roomCode: dbRoom.roomCode,
+            roomNumber: dbRoom.roomNumber,
+            name: dbRoom.name,
+            nameEn: `${dbRoom.categoryName} Room ${dbRoom.roomNumber}`,
+            category: categorySlug,
+            floor: `Tầng ${dbRoom.floor}`,
+            // DANH SÁCH ẢNH THỰC TẾ TỪ BẢNG phong_hinh_anh
+            images: dbRoom.images && dbRoom.images.length > 0 ? dbRoom.images.map((img) => ({
+              url: img.url,
+              caption: img.caption || `Ảnh phòng ${dbRoom.roomNumber}`
+            })) : [
+              { url: dbRoom.primaryImageUrl, caption: `Ảnh phòng ${dbRoom.roomNumber}` }
+            ],
+            specs: {
+              area: dbRoom.categoryId === 'cat-4' ? 65 : dbRoom.categoryId === 'cat-3' ? 45 : 32,
+              bed: dbRoom.maxCapacity >= 4 ? '2 King Lớn' : '1 King (1.8m x 2m)',
+              guests: dbRoom.maxCapacity || 2,
+            },
+            pricing: {
+              originalPrice: Number(dbRoom.originalPrice) || 1500000,
+              price: Number(dbRoom.price) || 1200000,
+              discountPercent: dbRoom.discountPercent || 20,
+              depositPercent: 30,
+            },
+            policies: {
+              deposit: 'Đặt cọc 30% giữ phòng ngay',
+            }
+          });
+        }
+      }).catch((err) => {
+        console.warn('Lỗi lấy thông tin phòng đặt từ database:', err);
+      }).finally(() => {
+        if (mounted) setLoadingRoom(false);
+      });
+    } else {
+      setLoadingRoom(false);
+    }
+    return () => { mounted = false; };
+  }, [roomId]);
 
   // Form state
   const [checkIn,  setCheckIn]  = useState(paramIn  || today);
@@ -150,14 +199,14 @@ export default function BookingPage() {
 
   // Tính giá
   const nights       = calcNights(checkIn, checkOut);
-  const pricePerNight = room.pricing.price;
+  const pricePerNight = room?.pricing?.price || 1200000;
   const subtotal      = pricePerNight * Math.max(nights, 1);
-  const depositPct    = room.pricing.depositPercent || 30;
+  const depositPct    = room?.pricing?.depositPercent || 30;
   const deposit       = Math.round((subtotal * depositPct) / 100);
   const remaining     = subtotal - deposit;
 
   // Weekend surcharge
-  const weekendSurcharge = room.pricing.weekendSurcharge || 0;
+  const weekendSurcharge = room?.pricing?.weekendSurcharge || 0;
 
   // Validate
   const validate = () => {
@@ -217,6 +266,28 @@ export default function BookingPage() {
     setShowSuccess(false);
     navigate('/');
   };
+
+  if (!room) {
+    return (
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center p-6 text-center">
+        {loadingRoom ? (
+          <div className="flex flex-col items-center gap-3">
+            <div className="w-10 h-10 border-4 border-accent/20 border-t-accent rounded-full animate-spin" />
+            <p className="text-sm text-text-secondary font-medium">Đang tải thông tin phòng từ hệ thống...</p>
+          </div>
+        ) : (
+          <div className="flex flex-col items-center gap-4 max-w-md bg-surface p-8 rounded-2xl border border-border-custom shadow-md">
+            <span className="material-symbols-outlined text-[48px] text-accent">search_off</span>
+            <h2 className="font-headline text-xl font-bold text-primary">Không tìm thấy phòng đặt</h2>
+            <p className="text-xs text-text-secondary">Mã phòng này không tồn tại hoặc đã được cập nhật. Vui lòng chọn một phòng khác trong danh mục.</p>
+            <Button variant="primary" fullWidth onClick={() => navigate('/rooms')}>
+              Xem danh sách phòng nghỉ
+            </Button>
+          </div>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">

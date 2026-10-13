@@ -21,6 +21,18 @@ public interface RoomRepository extends JpaRepository<Room, String> {
     List<Room> findByUsageStatusAndCleaningStatus(UsageStatus usageStatus, CleaningStatus cleaningStatus);
     List<Room> findAllByOrderByFloorAscRoomNumberAsc();
 
+    @Query("SELECT DISTINCT r FROM Room r " +
+            "LEFT JOIN FETCH r.roomCategory rc " +
+            "LEFT JOIN FETCH rc.amenities " +
+            "ORDER BY r.floor ASC, r.roomNumber ASC")
+    List<Room> findAllWithCategoryAndAmenities();
+
+    @Query("SELECT DISTINCT r FROM Room r " +
+            "LEFT JOIN FETCH r.roomCategory rc " +
+            "LEFT JOIN FETCH rc.amenities " +
+            "WHERE r.id = :id OR r.roomCode = :id OR r.roomNumber = :id")
+    Optional<Room> findByIdOrCodeWithCategoryAndAmenities(@Param("id") String id);
+
     @Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT room FROM Room room JOIN FETCH room.roomCategory WHERE room.id = :roomId")
     Optional<Room> findByIdForBooking(@Param("roomId") String roomId);

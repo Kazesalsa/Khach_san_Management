@@ -38,4 +38,20 @@ public class RoomController {
         Room updatedRoom = roomService.markRoomAsCleaned(roomCode);
         return ResponseEntity.ok(RoomStatusResponse.from(updatedRoom));
     }
+
+    /**
+     * Lấy danh sách toàn bộ phòng và hình ảnh thực tế từ CSDL cho khách hàng
+     */
+    @GetMapping("/public")
+    public ResponseEntity<List<com.hotel.suongmai.dto.PublicRoomResponse>> getPublicRooms() {
+        return ResponseEntity.ok(roomService.getPublicRooms());
+    }
+
+    /**
+     * Lấy chi tiết phòng và bộ sưu tập ảnh từ CSDL theo ID hoặc mã phòng
+     */
+    @GetMapping("/public/{id}")
+    public ResponseEntity<com.hotel.suongmai.dto.PublicRoomResponse> getPublicRoomDetail(@PathVariable String id) {
+        return ResponseEntity.ok(roomService.getPublicRoomById(id));
+    }
 }
