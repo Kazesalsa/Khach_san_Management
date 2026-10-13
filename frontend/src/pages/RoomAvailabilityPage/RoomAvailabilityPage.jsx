@@ -1,9 +1,10 @@
-import { useState, useEffect, useCallback } from 'react';
-import { useSearchParams, Link } from 'react-router-dom';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { useSearchParams, Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import DatePicker from '../../components/ui/DatePicker';
 import Badge from '../../components/ui/Badge';
 import Button from '../../components/ui/Button';
+import { getLocalDate } from '../../services/bookingService';
 
 const API_BASE = import.meta.env.VITE_API_URL || '/api';
 
@@ -31,13 +32,14 @@ const formatPrice = (price) =>
   }).format(price);
 
 function RoomAvailabilityPage() {
+  const navigate = useNavigate();
   useEffect(() => {
     document.title = 'Tra Cứu Phòng Trống | Sương Mai Hotel';
   }, []);
 
   const [searchParams] = useSearchParams();
-  const today = new Date().toISOString().split('T')[0];
-  const tomorrow = new Date(Date.now() + 86400000).toISOString().split('T')[0];
+  const today = getLocalDate();
+  const tomorrow = getLocalDate(1);
 
   const paramCheckIn = searchParams.get('checkIn') || searchParams.get('from_date') || '';
   const paramCheckOut = searchParams.get('checkOut') || searchParams.get('to_date') || '';
@@ -49,6 +51,17 @@ function RoomAvailabilityPage() {
   const [rooms, setRooms] = useState(null); // null = chưa search, [] = không có phòng
   const [apiError, setApiError] = useState('');
   const [searched, setSearched] = useState(false);
+  const [searchedDates, setSearchedDates] = useState(null);
+  const requestSequence = useRef(0);
+
+  const invalidateSearch = () => {
+    requestSequence.current += 1;
+    setRooms(null);
+    setSearched(false);
+    setSearchedDates(null);
+    setLoading(false);
+    setApiError('');
+  };
 
   // Validate ngày trước khi gọi API
   const validate = () => {
@@ -72,6 +85,7 @@ function RoomAvailabilityPage() {
 
   // Xử lý thay đổi ngày nhận phòng — tự động reset ngày trả nếu bị lỗi
   const handleCheckInChange = (e) => {
+    invalidateSearch();
     const val = e.target.value;
     setCheckIn(val);
     setErrors((prev) => ({ ...prev, checkIn: '' }));
@@ -89,6 +103,7 @@ function RoomAvailabilityPage() {
 
   // Xử lý thay đổi ngày trả phòng
   const handleCheckOutChange = (e) => {
+    invalidateSearch();
     const val = e.target.value;
     setCheckOut(val);
 
@@ -102,14 +117,35 @@ function RoomAvailabilityPage() {
     }
   };
 
+  // Bàn giao phòng và ngày cho form đặt phòng (UC-05 / #86).
+  const handleBookNow = (room) => {
+    if (!searchedDates || searchedDates.checkIn !== checkIn || searchedDates.checkOut !== checkOut) {
+      setApiError('Ngày lưu trú đã thay đổi. Vui lòng tra cứu lại trước khi đặt phòng.');
+      return;
+    }
+    const id = room.roomId ?? room.id;
+    if (!id) {
+      setApiError('Không xác định được ID phòng. Vui lòng tra cứu lại.');
+      return;
+    }
+    const params = new URLSearchParams({
+      roomId: String(id),
+      checkIn: searchedDates.checkIn,
+      checkOut: searchedDates.checkOut,
+    });
+    navigate(`/booking?${params.toString()}`);
+  };
+
   // Hàm gọi API tra cứu phòng trống
   const fetchAvailableRooms = useCallback(async (inDate, outDate) => {
     if (!inDate || !outDate || inDate >= outDate) return;
+    const sequence = ++requestSequence.current;
 
     setLoading(true);
     setApiError('');
     setRooms(null);
     setSearched(false);
+    setSearchedDates(null);
 
     // Lấy token từ storage (remember me → localStorage, ngược lại → sessionStorage)
     const token =
@@ -123,9 +159,13 @@ function RoomAvailabilityPage() {
         },
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
+      if (sequence !== requestSequence.current) return;
+      if (!Array.isArray(response.data)) throw new Error('Dữ liệu phòng không hợp lệ');
       setRooms(response.data);
+      setSearchedDates({ checkIn: inDate, checkOut: outDate });
       setSearched(true);
     } catch (err) {
+      if (sequence !== requestSequence.current) return;
       if (err.response) {
         // Lỗi từ server (4xx, 5xx)
         setApiError(
@@ -142,18 +182,20 @@ function RoomAvailabilityPage() {
       }
       setSearched(true);
     } finally {
-      setLoading(false);
+      if (sequence === requestSequence.current) setLoading(false);
     }
   }, []);
 
   // Tự động tìm kiếm nếu có tham số truyền từ URL (ví dụ từ Trang chủ)
   useEffect(() => {
-    if (paramCheckIn && paramCheckOut && paramCheckOut > paramCheckIn) {
+    if (paramCheckIn >= today && paramCheckOut > paramCheckIn) {
       setCheckIn(paramCheckIn);
       setCheckOut(paramCheckOut);
       fetchAvailableRooms(paramCheckIn, paramCheckOut);
     }
-  }, [paramCheckIn, paramCheckOut, fetchAvailableRooms]);
+  }, [paramCheckIn, paramCheckOut, fetchAvailableRooms, today]);
+
+  useEffect(() => () => { requestSequence.current += 1; }, []);
 
   // Xử lý khi người dùng bấm nút [Tìm phòng] trên form
   const handleSearch = async (e) => {
@@ -367,6 +409,9 @@ function RoomAvailabilityPage() {
                           <th className="px-6 py-4 text-xs uppercase tracking-wider text-text-secondary">
                             Trạng thái
                           </th>
+                          <th className="px-6 py-4 text-xs uppercase tracking-wider text-text-secondary">
+                            Thao tác
+                          </th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-border-custom">
@@ -400,6 +445,11 @@ function RoomAvailabilityPage() {
                               <Badge variant="success" dot>
                                 Còn trống
                               </Badge>
+                            </td>
+                            <td className="px-6 py-4">
+                              <Button variant="primary" size="sm" onClick={() => handleBookNow(room)}>
+                                Đặt ngay
+                              </Button>
                             </td>
                           </tr>
                         ))}

@@ -1,10 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import Modal from '../ui/Modal';
 import Button from '../ui/Button';
 import { Input } from '../ui/Input';
 import DatePicker from '../ui/DatePicker';
 import { useToast } from '../ui/Toast';
-import { createDepositPayment, redirectToPayOS } from '../../services/paymentService';
+import { redirectToPayOS } from '../../services/paymentService';
+import { createBooking, createBookingPayment, getAuthToken, getBookingAttempt, getBookingErrorMessage, getLocalDate, validateBooking } from '../../services/bookingService';
 
 const BookingConfirmModal = ({
   isOpen,
@@ -13,9 +15,9 @@ const BookingConfirmModal = ({
   initialCheckIn = '',
   initialCheckOut = '',
   initialGuests = 2,
-  onSuccess,
 }) => {
   const { addToast } = useToast();
+  const navigate = useNavigate();
 
   // Booking details state
   const [checkIn, setCheckIn] = useState('');
@@ -32,27 +34,55 @@ const BookingConfirmModal = ({
   // Form validation errors
   const [errors, setErrors] = useState({});
 
-  // Processing & Success state
+  // Persisted booking state: do not repeat POST after losing a response.
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [bookingSuccess, setBookingSuccess] = useState(false);
-  const [bookingRef, setBookingRef] = useState('');
+  const submitting = useRef(false);
+  const lastItinerary = useRef(null);
+  const [outcomeUnknown, setOutcomeUnknown] = useState(false);
+  const [authRejected, setAuthRejected] = useState(false);
+  const [createdBooking, setCreatedBooking] = useState(null);
+  const [submitError, setSubmitError] = useState('');
 
-  // Set default dates if not provided
   useEffect(() => {
-    if (isOpen) {
-      setBookingSuccess(false);
-      setErrors({});
+    if (!isOpen) return;
 
-      const today = new Date();
-      const tomorrow = new Date();
-      tomorrow.setDate(today.getDate() + 1);
+    const previous = lastItinerary.current;
+    const restore =
+      previous?.roomId === room?.id &&
+      previous.initialCheckIn === initialCheckIn &&
+      previous.initialCheckOut === initialCheckOut;
 
-      const formatDate = (d) => d.toISOString().split('T')[0];
-      setCheckIn(initialCheckIn || formatDate(today));
-      setCheckOut(initialCheckOut || formatDate(tomorrow));
-      setGuests(initialGuests || 2);
-    }
-  }, [isOpen, initialCheckIn, initialCheckOut, initialGuests]);
+    const initialIn =
+      (restore ? previous.checkIn : initialCheckIn) || getLocalDate();
+
+    const initialOut =
+      (restore ? previous.checkOut : initialCheckOut) || getLocalDate(1);
+
+    const attempt = getBookingAttempt({
+      roomId: room?.id,
+      checkIn: initialIn,
+      checkOut: initialOut,
+    });
+
+    const saved = attempt?.status === 'created' ? attempt.data : null;
+
+    setCreatedBooking(saved ? { data: saved } : null);
+    setOutcomeUnknown(Boolean(attempt && !saved));
+    setSubmitError(attempt && !saved ? getBookingErrorMessage({}) : '');
+    setErrors({});
+
+    setCheckIn(initialIn);
+    setCheckOut(initialOut);
+    setGuests(
+      attempt?.guestCounts?.adults ??
+      attempt?.payload?.guestCount ??
+      initialGuests
+    );
+    setChildrenCount(attempt?.guestCounts?.children ?? 0);
+    setGuestName(attempt?.payload?.guestName || '');
+    setPhone(attempt?.payload?.phone || '');
+    setEmail(attempt?.payload?.email || '');
+  }, [isOpen, room?.id, initialCheckIn, initialCheckOut, initialGuests]);
 
   // Calculate nights
   const calculateNights = () => {
@@ -66,87 +96,52 @@ const BookingConfirmModal = ({
 
   const nights = calculateNights();
   const roomPricePerNight = room?.pricing?.price || 1200000;
-  const subtotal = roomPricePerNight * nights;
+  const subtotal = createdBooking ? Number(createdBooking.data.estimatedTotal) : roomPricePerNight * nights;
   const depositPercent = room?.pricing?.depositPercent || 30;
-  const depositAmount = Math.round((subtotal * depositPercent) / 100);
+  const depositAmount = createdBooking ? Number(createdBooking.data.requiredDeposit) : Math.round((subtotal * depositPercent) / 100);
 
   const formatVND = (num) => new Intl.NumberFormat('vi-VN').format(num) + '₫';
 
-  // Validation
-  const validateForm = () => {
-    const newErrors = {};
-    if (!guestName.trim()) {
-      newErrors.guestName = 'Vui lòng nhập họ và tên của quý khách';
-    }
-    if (!phone.trim()) {
-      newErrors.phone = 'Vui lòng nhập số điện thoại liên hệ';
-    } else if (!/^[0-9+() -]{9,15}$/.test(phone.trim())) {
-      newErrors.phone = 'Số điện thoại không đúng định dạng';
-    }
-    if (!email.trim()) {
-      newErrors.email = 'Vui lòng nhập email nhận phiếu xác nhận';
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
-      newErrors.email = 'Email không hợp lệ';
-    }
-
-    const d1 = new Date(checkIn);
-    const d2 = new Date(checkOut);
-    if (d2 <= d1) {
-      newErrors.checkOut = 'Ngày trả phòng phải sau ngày nhận phòng';
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+  const bookingPayload = {
+    roomId: room?.id, checkIn, checkOut,
+    guestCount: Number(guests) + Number(childrenCount),
+    guestName: guestName.trim(), phone: phone.trim(), email: email.trim(),
   };
 
-  // Handle Submit
   const handleConfirmBooking = async (e) => {
     e.preventDefault();
-    if (!validateForm()) return;
-
+    if (submitting.current || outcomeUnknown) return;
+    const fieldErrors = validateBooking(bookingPayload, room?.specs.guests);
+    setErrors(fieldErrors);
+    if (Object.keys(fieldErrors).length) return;
+    setSubmitError('');
+    if (!getAuthToken() || authRejected) {
+      const params = new URLSearchParams({ roomId: room.id, checkIn, checkOut });
+      navigate(`/dang-nhap?next=${encodeURIComponent(`/booking?${params.toString()}`)}`);
+      return;
+    }
+    submitting.current = true;
+    lastItinerary.current = { roomId: room.id, checkIn, checkOut, initialCheckIn, initialCheckOut };
     setIsSubmitting(true);
-    const code = 'SM-' + Math.floor(100000 + Math.random() * 900000);
-    setBookingRef(code);
-
+    let saved;
     try {
-      // Gọi API tạo link thanh toán tiền cọc qua cổng PayOS
-      const paymentRes = await createDepositPayment({
-        bookingCode: code,
-        roomCategoryId: room.categoryId || room.category,
-        roomId: room.id,
-        roomName: room.name,
-        checkIn,
-        checkOut,
-        guestName,
-        phone,
-        email,
-        adults: guests,
-        children: childrenCount,
-        totalAmount: subtotal,
-        depositAmount: depositAmount,
-      });
-
-      if (paymentRes?.checkoutUrl) {
-        // [PAYOS GATEWAY]: Chuyển hướng trực tiếp sang trang thanh toán PayOS
-        redirectToPayOS(paymentRes.checkoutUrl);
-        return;
-      }
-      throw new Error('Không nhận được liên kết thanh toán từ PayOS');
-    } catch (err) {
-      console.warn('Không thể chuyển sang PayOS, sử dụng fallback modal thành công:', err);
+      saved = await createBooking(bookingPayload, { adults: guests, children: childrenCount });
+      setCreatedBooking({ data: saved });
+      const payment = await createBookingPayment(saved, bookingPayload);
+      redirectToPayOS(payment.checkoutUrl);
+    } catch (error) {
+      const status = error.response?.status;
+      setAuthRejected(status === 401 || status === 403);
+      const message = saved
+        ? `Đã tạo đơn ${saved.bookingCode}; chưa xác nhận thanh toán cọc. PayOS gặp lỗi: ${error.response?.data?.message || error.message}. Bấm Tiếp tục thanh toán để thử lại cho cùng mã.`
+        : getBookingErrorMessage(error);
+      if (!saved) setOutcomeUnknown(['BOOKING_OUTCOME_UNKNOWN', 'BOOKING_RESPONSE_INVALID', 'BOOKING_ATTEMPT_CHANGED'].includes(error.code));
+      setErrors((previous) => ({ ...previous, ...error.response?.data?.errors }));
+      setSubmitError(message);
+      addToast({ title: 'Chưa hoàn tất đặt phòng', message, type: 'error', duration: 6000 });
+    } finally {
+      submitting.current = false;
       setIsSubmitting(false);
-      setBookingSuccess(true);
-
-      addToast({
-        title: 'Giữ phòng thành công!',
-        message: `Mã đặt phòng ${code} đã được ghi nhận. Cảm ơn quý khách!`,
-        type: 'success',
-        duration: 5000,
-      });
-
-      if (onSuccess) {
-        onSuccess({ code, room, checkIn, checkOut, guestName, depositAmount });
-      }
     }
   };
 
@@ -155,65 +150,18 @@ const BookingConfirmModal = ({
   return (
     <Modal
       isOpen={isOpen}
-      onClose={onClose}
-      title={bookingSuccess ? 'Xác Nhận Giữ Phòng Thành Công' : 'Xác Nhận Đặt Phòng Nghỉ'}
-      subtitle={
-        bookingSuccess
-          ? 'Hệ thống Khách sạn Sương Mai đã ghi nhận yêu cầu lưu trú của quý khách'
-          : `Hạng phòng: ${room.name} • Indochine Heritage Luxury`
-      }
+      onClose={isSubmitting ? () => {} : onClose}
+      showClose={!isSubmitting}
+      title="Xác Nhận Đặt Phòng Nghỉ"
+      subtitle={`Hạng phòng: ${room.name} • Indochine Heritage Luxury`}
       maxWidth="max-w-2xl"
     >
-      {bookingSuccess ? (
-        /* Success State */
-        <div className="flex flex-col items-center text-center py-4">
-          <div className="w-16 h-16 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center mb-4 border border-emerald-300">
-            <span className="material-symbols-outlined text-[36px]">check_circle</span>
+        <form onSubmit={handleConfirmBooking} noValidate className="flex flex-col gap-6">
+
+                    <div className="bg-amber-50 border border-amber-300 rounded-xl p-3.5 text-xs text-amber-900">
+            Phòng chưa được khóa giữ chỗ. Hệ thống sẽ kiểm tra lại phòng trống ngay khi bạn xác nhận đặt phòng.
           </div>
 
-          <h4 className="font-headline text-2xl font-bold text-primary mb-1">
-            Kính chúc quý khách kỳ nghỉ an yên!
-          </h4>
-          <p className="text-xs sm:text-sm text-text-secondary max-w-md mb-6 leading-relaxed">
-            Mã đặt chỗ của quý khách là <strong className="text-primary font-bold text-base">{bookingRef}</strong>. Thông tin xác nhận chi tiết và hướng dẫn thanh toán cọc đã được gửi đến hộp thư <strong className="text-primary">{email}</strong>.
-          </p>
-
-          {/* Booking Summary Ticket */}
-          <div className="w-full bg-surface-alt/60 rounded-xl border border-border-custom p-5 mb-6 text-left flex flex-col gap-3 text-xs">
-            <div className="flex justify-between items-center pb-2 border-b border-border-custom/50">
-              <span className="text-text-secondary uppercase font-semibold">Khách lưu trú:</span>
-              <span className="font-bold text-primary">{guestName} ({phone})</span>
-            </div>
-            <div className="flex justify-between items-center pb-2 border-b border-border-custom/50">
-              <span className="text-text-secondary uppercase font-semibold">Thời gian lưu trú:</span>
-              <span className="font-bold text-primary">
-                {checkIn} đến {checkOut} ({nights} đêm)
-              </span>
-            </div>
-            <div className="flex justify-between items-center pb-2 border-b border-border-custom/50">
-              <span className="text-text-secondary uppercase font-semibold">Số lượng khách:</span>
-              <span className="font-bold text-primary">
-                {guests} Người lớn {childrenCount > 0 ? `+ ${childrenCount} Trẻ em` : ''}
-              </span>
-            </div>
-            <div className="flex justify-between items-center text-sm pt-1">
-              <span className="text-primary font-bold">Tiền cọc cần thanh toán (30%):</span>
-              <span className="font-headline text-lg font-bold text-accent">
-                {formatVND(depositAmount)}
-              </span>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-3 w-full sm:w-auto">
-            <Button variant="secondary" size="md" onClick={onClose} fullWidth>
-              Hoàn tất & Đóng
-            </Button>
-          </div>
-        </div>
-      ) : (
-        /* Booking Confirmation Form */
-        <form onSubmit={handleConfirmBooking} className="flex flex-col gap-6">
-          
           {/* Room Brief Card */}
           <div className="flex flex-col sm:flex-row items-center gap-4 bg-surface-alt/40 p-3.5 rounded-xl border border-border-custom">
             <img
@@ -243,6 +191,7 @@ const BookingConfirmModal = ({
             </div>
           </div>
 
+          <fieldset disabled={isSubmitting || Boolean(createdBooking) || outcomeUnknown} className="contents">
           {/* Date & Guest Pickers */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <DatePicker
@@ -250,7 +199,8 @@ const BookingConfirmModal = ({
               id="modal-check-in"
               value={checkIn}
               onChange={(e) => setCheckIn(e.target.value)}
-              min={new Date().toISOString().split('T')[0]}
+              min={getLocalDate()}
+              error={errors.checkIn}
               required
             />
             <DatePicker
@@ -258,7 +208,7 @@ const BookingConfirmModal = ({
               id="modal-check-out"
               value={checkOut}
               onChange={(e) => setCheckOut(e.target.value)}
-              min={checkIn || new Date().toISOString().split('T')[0]}
+              min={checkIn || getLocalDate()}
               error={errors.checkOut}
               required
             />
@@ -344,10 +294,13 @@ const BookingConfirmModal = ({
             />
           </div>
 
+          </fieldset>
+          {errors.guestCount && <p role="alert" className="text-sm text-red-800">{errors.guestCount}</p>}
+
           {/* Financial Calculation Breakdown */}
           <div className="bg-surface-alt/60 rounded-xl p-4 border border-border-custom flex flex-col gap-2 text-xs">
             <div className="flex justify-between items-center text-text-secondary">
-              <span>Đơn giá phòng ({nights} đêm x {formatVND(room.pricing.price)}):</span>
+              <span>{createdBooking ? `Tiền phòng theo đơn (${nights} đêm):` : `Đơn giá phòng (${nights} đêm x ${formatVND(room.pricing.price)}):`}</span>
               <span className="font-semibold text-text-primary">{formatVND(subtotal)}</span>
             </div>
             <div className="flex justify-between items-center text-emerald-800">
@@ -388,6 +341,15 @@ const BookingConfirmModal = ({
             </div>
           </div>
 
+          {createdBooking && <p role="status" className="text-sm text-primary">Đã tạo đơn <strong>{createdBooking.data.bookingCode}</strong>. Tiếp tục thanh toán cọc cho đơn này.</p>}
+          {submitError && (
+            <div role="alert" className="rounded-xl border border-red-300 bg-red-50 p-3 text-sm text-red-800">
+              {submitError}
+            </div>
+          )}
+          {(!getAuthToken() || authRejected) && (
+            <p className="text-xs text-amber-800">Vui lòng đăng nhập hoặc đăng ký để đặt phòng. Nhấn Xác nhận đặt sẽ chuyển đến trang đăng nhập.</p>
+          )}
           {/* Form Actions */}
           <div className="flex items-center justify-end gap-3 pt-3 border-t border-border-custom">
             <Button
@@ -403,13 +365,13 @@ const BookingConfirmModal = ({
               variant="primary"
               size="md"
               isLoading={isSubmitting}
+              isDisabled={outcomeUnknown}
             >
-              {isSubmitting ? 'Đang xử lý…' : 'Xác nhận đặt'}
+              {isSubmitting ? 'Đang xử lý…' : createdBooking ? 'Tiếp tục thanh toán' : 'Xác nhận đặt'}
             </Button>
           </div>
 
         </form>
-      )}
     </Modal>
   );
 };

@@ -1,12 +1,20 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useSearchParams, Link, useNavigate } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
 import { Input } from '../../components/ui/Input';
 import Button from '../../components/ui/Button';
 import Badge from '../../components/ui/Badge';
 import DatePicker from '../../components/ui/DatePicker';
-import { createDepositPayment, redirectToPayOS } from '../../services/paymentService';
+import { redirectToPayOS } from '../../services/paymentService';
 import { getPublicRoomDetail, DEFAULT_ROOM_IMAGE } from '../../services/roomService';
+import {
+  createBooking,
+  createBookingPayment,
+  getAuthToken,
+  getBookingAttempt,
+  getBookingErrorMessage,
+  getLocalDate,
+  validateBooking,
+} from '../../services/bookingService';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 const formatVND = (n) =>
@@ -24,117 +32,36 @@ const calcNights = (ci, co) => {
   return diff > 0 ? Math.round(diff) : 0;
 };
 
-// ─── Booking Success Modal ────────────────────────────────────────────────────
-function BookingSuccessModal({ isOpen, onClose, bookingRef, guestName, email, checkIn, checkOut, nights, depositAmount, roomName }) {
-  if (!isOpen) return null;
-  return (
-    <AnimatePresence>
-      {isOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 overflow-y-auto">
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
-            onClick={onClose}
-            className="fixed inset-0 bg-primary-dark/80 backdrop-blur-sm"
-          />
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95, y: 16 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.95, y: 16 }}
-            transition={{ duration: 0.25, ease: 'easeOut' }}
-            className="relative w-full max-w-lg bg-surface rounded-2xl border border-border-custom shadow-2xl z-10 my-8 overflow-hidden"
-          >
-            {/* Accent top bar */}
-            <div className="h-1.5 w-full bg-gradient-to-r from-accent via-accent-hover to-accent" />
-
-            <div className="p-8 flex flex-col items-center text-center">
-              {/* Check icon */}
-              <div className="w-16 h-16 rounded-full bg-emerald-100 border border-emerald-300 flex items-center justify-center mb-5">
-                <span className="material-symbols-outlined text-[36px] text-emerald-700">check_circle</span>
-              </div>
-
-              <Badge variant="gold" className="mb-3">Đặt phòng thành công</Badge>
-
-              <h2 className="font-headline text-2xl font-bold text-primary mb-2">
-                Kính chúc quý khách kỳ nghỉ an yên!
-              </h2>
-              <p className="text-sm text-text-secondary leading-relaxed max-w-sm mb-6">
-                Thông tin xác nhận đã được gửi đến{' '}
-                <strong className="text-primary">{email}</strong>. Vui lòng kiểm tra hộp thư.
-              </p>
-
-              {/* Booking ticket */}
-              <div className="w-full bg-surface-alt/60 rounded-xl border border-border-custom p-5 text-left text-xs space-y-3 mb-6">
-                <div className="flex justify-between pb-2.5 border-b border-border-custom/50">
-                  <span className="text-text-secondary uppercase font-semibold tracking-wide">Mã đặt phòng</span>
-                  <span className="font-headline text-base font-bold text-accent">{bookingRef}</span>
-                </div>
-                <div className="flex justify-between pb-2.5 border-b border-border-custom/50">
-                  <span className="text-text-secondary uppercase font-semibold tracking-wide">Hạng phòng</span>
-                  <span className="font-bold text-primary">{roomName}</span>
-                </div>
-                <div className="flex justify-between pb-2.5 border-b border-border-custom/50">
-                  <span className="text-text-secondary uppercase font-semibold tracking-wide">Khách lưu trú</span>
-                  <span className="font-bold text-primary">{guestName}</span>
-                </div>
-                <div className="flex justify-between pb-2.5 border-b border-border-custom/50">
-                  <span className="text-text-secondary uppercase font-semibold tracking-wide">Thời gian</span>
-                  <span className="font-bold text-primary">{formatDisplay(checkIn)} → {formatDisplay(checkOut)} ({nights} đêm)</span>
-                </div>
-                <div className="flex justify-between items-center pt-1">
-                  <span className="text-primary font-bold uppercase tracking-wide">Tiền cọc cần thanh toán (30%)</span>
-                  <span className="font-headline text-lg font-bold text-accent">{formatVND(depositAmount)}</span>
-                </div>
-              </div>
-
-              <p className="text-[11px] text-text-secondary mb-5 leading-5">
-                Vui lòng thanh toán tiền cọc trong vòng <strong>24 giờ</strong> để giữ phòng.
-                Thông tin chuyển khoản đã được gửi qua email.
-              </p>
-
-              <div className="flex flex-col sm:flex-row gap-3 w-full">
-                <Button variant="secondary" fullWidth onClick={onClose}>
-                  Về trang chủ
-                </Button>
-                <Button variant="primary" fullWidth onClick={onClose} iconLeft="receipt_long">
-                  Xem chi tiết đặt phòng
-                </Button>
-              </div>
-            </div>
-          </motion.div>
-        </div>
-      )}
-    </AnimatePresence>
-  );
-}
-
 // ─── Main Page ────────────────────────────────────────────────────────────────
 export default function BookingPage() {
   useEffect(() => {
     document.title = 'Xác Nhận Đặt Phòng | Sương Mai Hotel';
   }, []);
 
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
 
   const roomId   = searchParams.get('roomId')   || '';
   const paramIn  = searchParams.get('checkIn')  || searchParams.get('from_date') || '';
   const paramOut = searchParams.get('checkOut') || searchParams.get('to_date')   || '';
 
-  const today    = new Date().toISOString().split('T')[0];
-  const tomorrow = new Date(Date.now() + 86400000).toISOString().split('T')[0];
+  const today = getLocalDate();
+  const tomorrow = getLocalDate(1);
 
   const [room, setRoom] = useState(null);
   const [loadingRoom, setLoadingRoom] = useState(true);
 
   useEffect(() => {
     let mounted = true;
+    setRoom(null);
+    setLoadingRoom(true);
     if (roomId) {
       getPublicRoomDetail(roomId).then((dbRoom) => {
-        if (mounted && dbRoom) {
-          const categorySlug = dbRoom.categoryId === 'cat-4' ? 'suite' :
+          if (mounted && dbRoom?.id === roomId) {
+            const categorySlug =
+              dbRoom.categoryId === 'cat-4' ? 'suite' :
+              dbRoom.categoryId === 'cat-3' ? 'deluxe' :
+              dbRoom.categoryId === 'cat-2' ? 'superior' : 'standard';
                                dbRoom.categoryId === 'cat-3' ? 'deluxe' :
                                dbRoom.categoryId === 'cat-2' ? 'superior' : 'standard';
           setRoom({
@@ -193,78 +120,94 @@ export default function BookingPage() {
   const [errors,    setErrors]    = useState({});
   const [busy,      setBusy]      = useState(false);
 
-  // Success modal
-  const [showSuccess, setShowSuccess]   = useState(false);
-  const [bookingRef,  setBookingRef]    = useState('');
+  const submitting = useRef(false);
+  const [outcomeUnknown, setOutcomeUnknown] = useState(false);
+  const [authRejected, setAuthRejected] = useState(false);
+  const [createdBooking, setCreatedBooking] = useState(null);
+  const [bookingConflict, setBookingConflict] = useState(false);
+
+  useEffect(() => {
+    if (submitting.current) return;
+    const initialIn = paramIn || today;
+    const initialOut = paramOut || tomorrow;
+    const attempt = getBookingAttempt({ roomId, checkIn: initialIn, checkOut: initialOut });
+    const saved = attempt?.status === 'created' ? attempt.data : null;
+    setCheckIn(initialIn);
+    setCheckOut(initialOut);
+    setCreatedBooking(saved ? { data: saved } : null);
+    setOutcomeUnknown(Boolean(attempt && !saved));
+    setBookingConflict(false);
+    setErrors(attempt && !saved ? { submit: getBookingErrorMessage({}) } : {});
+    setGuestName(attempt?.payload?.guestName || '');
+    setPhone(attempt?.payload?.phone || '');
+    setEmail(attempt?.payload?.email || '');
+    setAdults(attempt?.guestCounts?.adults ?? attempt?.payload?.guestCount ?? 2);
+    setChildren(attempt?.guestCounts?.children ?? 0);
+  }, [roomId, paramIn, paramOut, today, tomorrow]);
 
   // Tính giá
   const nights       = calcNights(checkIn, checkOut);
   const pricePerNight = room?.pricing?.price || 1200000;
-  const subtotal      = pricePerNight * Math.max(nights, 1);
+  const subtotal      = createdBooking ? Number(createdBooking.data.estimatedTotal) : pricePerNight * Math.max(nights, 1);
   const depositPct    = room?.pricing?.depositPercent || 30;
-  const deposit       = Math.round((subtotal * depositPct) / 100);
+  const deposit       = createdBooking ? Number(createdBooking.data.requiredDeposit) : Math.round((subtotal * depositPct) / 100);
   const remaining     = subtotal - deposit;
 
   // Weekend surcharge
   const weekendSurcharge = room?.pricing?.weekendSurcharge || 0;
 
-  // Validate
-  const validate = () => {
-    const e = {};
-    if (!guestName.trim()) e.guestName = 'Vui lòng nhập họ và tên';
-    if (!phone.trim())     e.phone = 'Vui lòng nhập số điện thoại';
-    else if (!/^[0-9+() -]{9,15}$/.test(phone.trim())) e.phone = 'Số điện thoại không hợp lệ';
-    if (!email.trim())     e.email = 'Vui lòng nhập email';
-    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) e.email = 'Email không hợp lệ';
-    if (!checkIn)  e.checkIn  = 'Vui lòng chọn ngày nhận phòng';
-    if (!checkOut) e.checkOut = 'Vui lòng chọn ngày trả phòng';
-    else if (checkIn && checkOut <= checkIn) e.checkOut = 'Ngày trả phòng phải sau ngày nhận phòng';
-    setErrors(e);
-    return Object.keys(e).length === 0;
+  const bookingPayload = {
+    roomId, checkIn, checkOut,
+    guestCount: Number(adults) + Number(children),
+    guestName: guestName.trim(), phone: phone.trim(), email: email.trim(),
   };
 
   const handleSubmit = async (ev) => {
     ev.preventDefault();
-    if (!validate()) return;
-    setBusy(true);
-
-    const code = 'SM-' + Math.floor(100000 + Math.random() * 900000);
-    setBookingRef(code);
-
-    try {
-      // 1. Gửi yêu cầu tạo giao dịch thanh toán đặt cọc qua cổng PayOS
-      const paymentRes = await createDepositPayment({
-        bookingCode: code,
-        roomCategoryId: room.categoryId || room.category,
-        roomId: room.id,
-        roomName: room.name,
-        checkIn,
-        checkOut,
-        guestName,
-        phone,
-        email,
-        adults,
-        children,
-        totalAmount: subtotal,
-        depositAmount: deposit,
-      });
-
-      if (paymentRes?.checkoutUrl) {
-        // [PAYOS GATEWAY]: Chuyển hướng trực tiếp sang trang thanh toán PayOS
-        redirectToPayOS(paymentRes.checkoutUrl);
-        return;
-      }
-      throw new Error('Không nhận được liên kết thanh toán từ cổng PayOS');
-    } catch (err) {
-      console.warn('Không thể chuyển sang PayOS, hiển thị modal thông báo:', err);
-      setBusy(false);
-      setShowSuccess(true);
+    if (submitting.current || outcomeUnknown) return;
+    const fieldErrors = validateBooking(bookingPayload, room?.specs.guests);
+    setErrors(fieldErrors);
+    if (Object.keys(fieldErrors).length) return;
+    if (!getAuthToken() || authRejected) {
+      navigate(`/dang-nhap?next=${encodeURIComponent(window.location.pathname + window.location.search)}`);
+      return;
     }
-  };
-
-  const handleSuccessClose = () => {
-    setShowSuccess(false);
-    navigate('/');
+    if (!room || loadingRoom || room.id !== roomId) {
+      setErrors({ submit: 'Thông tin phòng chưa khớp phòng được chọn. Vui lòng tải lại trang.' });
+      return;
+    }
+    submitting.current = true;
+    setBusy(true);
+    setBookingConflict(false);
+    let saved;
+    try {
+      const request = createBooking(bookingPayload, { adults, children });
+      // Keep attempted dates in the URL so reload restores the same request.
+      if (paramIn !== checkIn || paramOut !== checkOut) {
+        const params = new URLSearchParams(searchParams);
+        params.set('checkIn', checkIn);
+        params.set('checkOut', checkOut);
+        setSearchParams(params, { replace: true });
+      }
+      saved = await request;
+      setCreatedBooking({ data: saved });
+      const payment = await createBookingPayment(saved, bookingPayload);
+      redirectToPayOS(payment.checkoutUrl);
+    } catch (error) {
+      const status = error.response?.status;
+      setAuthRejected(status === 401 || status === 403);
+      setBookingConflict(!saved && status === 409);
+      if (saved) {
+        const reason = error.response?.data?.message || error.message || 'Không thể kết nối thanh toán';
+        setErrors({ submit: `Đã tạo đơn ${saved.bookingCode}; chưa xác nhận thanh toán cọc. Không mở được PayOS: ${reason}. Bấm Tiếp tục thanh toán để thử lại cho cùng mã.` });
+      } else {
+        setOutcomeUnknown(['BOOKING_OUTCOME_UNKNOWN', 'BOOKING_RESPONSE_INVALID', 'BOOKING_ATTEMPT_CHANGED'].includes(error.code));
+        setErrors({ ...error.response?.data?.errors, submit: getBookingErrorMessage(error) });
+      }
+    } finally {
+      submitting.current = false;
+      setBusy(false);
+    }
   };
 
   if (!room) {
@@ -313,7 +256,7 @@ export default function BookingPage() {
           <div className="grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-8">
 
             {/* ── LEFT COLUMN ── */}
-            <div className="space-y-6">
+            <fieldset disabled={busy || Boolean(createdBooking) || outcomeUnknown} className="space-y-6 min-w-0">
 
               {/* Ảnh & thông tin phòng */}
               <section className="bg-surface rounded-2xl border border-border-custom shadow-sm overflow-hidden">
@@ -424,6 +367,8 @@ export default function BookingPage() {
                 </div>
               </section>
 
+              {errors.guestCount && <p role="alert" className="text-sm text-red-800">{errors.guestCount}</p>}
+
               {/* Form thông tin khách */}
               <section className="bg-surface rounded-2xl border border-border-custom shadow-sm p-5">
                 <h3 className="font-headline text-lg font-bold text-primary mb-4 flex items-center gap-2">
@@ -504,7 +449,7 @@ export default function BookingPage() {
                   ))}
                 </div>
               </section>
-            </div>
+            </fieldset>
 
             {/* ── RIGHT COLUMN — Bảng giá & CTA ── */}
             <div className="space-y-4">
@@ -519,8 +464,8 @@ export default function BookingPage() {
 
                   <div className="space-y-2.5 text-sm">
                     <div className="flex justify-between text-text-secondary">
-                      <span>{formatVND(pricePerNight)} × {Math.max(nights, 1)} đêm</span>
-                      <span className="font-semibold text-primary">{formatVND(pricePerNight * Math.max(nights, 1))}</span>
+                      <span>{createdBooking ? `Tiền phòng theo đơn (${nights} đêm)` : `${formatVND(pricePerNight)} × ${Math.max(nights, 1)} đêm`}</span>
+                      <span className="font-semibold text-primary">{formatVND(subtotal)}</span>
                     </div>
                     {weekendSurcharge > 0 && (
                       <div className="flex justify-between text-text-secondary">
@@ -578,6 +523,23 @@ export default function BookingPage() {
                   </section>
                 )}
 
+                {createdBooking && <p role="status" className="mb-3 text-sm text-primary">Đã tạo đơn <strong>{createdBooking.data.bookingCode}</strong>. Tiếp tục thanh toán cọc cho đơn này.</p>}
+                {/* API errors are not successful bookings. */}
+                {errors.submit && (
+                  <div role="alert" className="mb-3 rounded-xl border border-red-300 bg-red-50 p-3 text-sm text-red-800">
+                    {errors.submit}
+                    {bookingConflict && (
+                      <Link className="ml-2 font-semibold underline" to={`/rooms/available?checkIn=${encodeURIComponent(checkIn)}&checkOut=${encodeURIComponent(checkOut)}`}>
+                        Tìm phòng khác
+                      </Link>
+                    )}
+                  </div>
+                )}
+                {(!getAuthToken() || authRejected) && (
+                  <div className="mb-3 rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm text-amber-950">
+                    Vui lòng <Link className="font-semibold underline" to={`/dang-nhap?next=${encodeURIComponent(window.location.pathname + window.location.search)}`}>đăng nhập</Link> hoặc <Link className="font-semibold underline" to={`/dang-ky?next=${encodeURIComponent(window.location.pathname + window.location.search)}`}>đăng ký</Link> trước khi đặt phòng.
+                  </div>
+                )}
                 {/* CTA button */}
                 <Button
                   type="submit"
@@ -585,8 +547,9 @@ export default function BookingPage() {
                   size="lg"
                   fullWidth
                   isLoading={busy}
+                  isDisabled={outcomeUnknown || loadingRoom || room.id !== roomId}
                 >
-                  {busy ? 'Đang xử lý…' : 'Xác nhận đặt'}
+                  {busy ? 'Đang xử lý…' : createdBooking ? 'Tiếp tục thanh toán' : 'Xác nhận đặt'}
                 </Button>
 
                 <p className="text-center text-[10px] text-text-secondary mt-3 leading-5">
@@ -601,19 +564,6 @@ export default function BookingPage() {
         </form>
       </main>
 
-      {/* Success Modal */}
-      <BookingSuccessModal
-        isOpen={showSuccess}
-        onClose={handleSuccessClose}
-        bookingRef={bookingRef}
-        guestName={guestName}
-        email={email}
-        checkIn={checkIn}
-        checkOut={checkOut}
-        nights={nights}
-        depositAmount={deposit}
-        roomName={room.name}
-      />
     </div>
   );
 }
