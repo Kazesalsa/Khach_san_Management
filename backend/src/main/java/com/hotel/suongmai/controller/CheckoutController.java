@@ -4,6 +4,7 @@ import com.hotel.suongmai.dto.BatchCheckoutRequest;
 import com.hotel.suongmai.dto.CheckoutResponse;
 import com.hotel.suongmai.dto.OccupiedRoomResponse;
 import com.hotel.suongmai.security.TaiKhoanDetails;
+import com.hotel.suongmai.service.BillingService;
 import com.hotel.suongmai.service.CheckoutService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -21,6 +22,7 @@ import java.util.List;
 public class CheckoutController {
 
     private final CheckoutService checkoutService;
+
 
     @PreAuthorize("hasAnyRole('LE_TAN', 'CHU_KHACH_SAN')")
     @GetMapping("/checkout/rooms")

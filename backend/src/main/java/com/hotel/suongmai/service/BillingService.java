@@ -1,8 +1,6 @@
 package com.hotel.suongmai.service;
 
-import com.hotel.suongmai.dto.InvoicePreviewResponse;
-import com.hotel.suongmai.dto.RoomChargeResponse;
-import com.hotel.suongmai.dto.ServiceChargeResponse;
+import com.hotel.suongmai.dto.*;
 import com.hotel.suongmai.entity.*;
 import com.hotel.suongmai.exception.BookingNotFoundException;
 import com.hotel.suongmai.exception.InvalidBookingStateException;
@@ -14,23 +12,134 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
 public class BillingService {
+
     private final BookingRepository bookingRepository;
     private final BookingDetailRepository bookingDetailRepository;
     private final ChiTietGiaPhongRepository chiTietGiaPhongRepository;
     private final SuDungDichVuRepository suDungDichVuRepository;
     private final ThanhToanRepository thanhToanRepository;
+    private final HoaDonRepository hoaDonRepository;
+    private final NhanVienRepository nhanVienRepository;
 
     @Transactional(readOnly = true)
     public InvoicePreviewResponse previewInvoice(String bookingCode) {
-        Booking booking = bookingRepository.findByBookingCode(bookingCode)
-                .orElseThrow(()-> new BookingNotFoundException("Không tìm thấy đặt phòng với mã " + bookingCode));
+        Booking booking = getBooking(bookingCode);
 
         validateBookingCanBeBilled(booking);
 
+        InvoiceCalculation calculation = calculateInvoice(booking);
+
+        return new InvoicePreviewResponse(
+                bookingCode,
+                calculation.roomFee(),
+                calculation.serviceFee(),
+                calculation.subtotal(),
+                calculation.deposit(),
+                calculation.remaining(),
+                calculation.roomCharges(),
+                calculation.serviceCharges()
+        );
+    }
+
+    @Transactional
+    public InvoicePaymentResponse payInvoice(
+            String bookingCode,
+            PayInvoiceRequest request,
+            String username
+    ) {
+        Booking booking = getBooking(bookingCode);
+
+        validateBookingCanBeBilled(booking);
+
+        /*
+         * Nếu booking đã thanh toán trước đó thì trả lại kết quả cũ.
+         * Điều này giúp API an toàn khi frontend gửi request hai lần.
+         */
+        var existingInvoice = hoaDonRepository.findByBookingId(booking.getId());
+
+        if (existingInvoice.isPresent()) {
+            HoaDon invoice = existingInvoice.get();
+
+            if (invoice.getStatus() == TrangThaiHoaDon.DA_THANH_TOAN || invoice.getStatus() == TrangThaiHoaDon.DA_CHOT) {
+               ThanhToan payment = thanhToanRepository
+                        .findFirstByInvoiceIdAndTransactionTypeAndStatusOrderByTransactionTimeDesc(
+                                invoice.getId(),
+                                LoaiGiaoDich.THANH_TOAN_HOA_DON,
+                                TrangThaiThanhToan.THANH_CONG
+                        )
+                        .orElse(null);
+
+               return new InvoicePaymentResponse(
+                    bookingCode,
+                    invoice.getInvoiceNumber(),
+                    invoice.getRoomFee(),
+                    invoice.getServiceFee(),
+                    invoice.getTotalAmount(),
+                    invoice.getDeductedDeposit(),
+                    payment != null ? payment.getAmount() : BigDecimal.ZERO,
+                    invoice.getRemainingAmount(),
+                    payment != null ? payment.getPaymentMethod() : request.paymentMethod(),
+                    invoice.getStatus(),
+                    "Hóa đơn đã được thanh toán trước đó"
+               );
+            }
+        }
+
+        NhanVien cashier = nhanVienRepository
+                .findByTaiKhoan_TenDangNhap(username)
+                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy nhân viên thu tiền"));
+
+        InvoiceCalculation calculation = calculateInvoice(booking);
+
+        if (calculation.remaining().compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException("Booking không còn số tiền cần thanh toán");
+        }
+
+        HoaDon invoice = new HoaDon();
+        invoice.setInvoiceNumber(generateUniqueInvoiceNumber());
+        invoice.setBooking(booking);
+        invoice.setRoomFee(calculation.roomFee());
+        invoice.setServiceFee(calculation.serviceFee());
+        invoice.setDeductedDeposit(calculation.deposit());
+        invoice.setTotalAmount(calculation.subtotal());
+        invoice.setRemainingAmount(BigDecimal.ZERO);
+        invoice.setStatus(TrangThaiHoaDon.DA_THANH_TOAN);
+
+        invoice = hoaDonRepository.save(invoice);
+
+        ThanhToan payment = new ThanhToan();
+        payment.setTransactionType(LoaiGiaoDich.THANH_TOAN_HOA_DON);
+        payment.setAmount(calculation.remaining());
+        payment.setPaymentMethod(request.paymentMethod());
+        payment.setStatus(TrangThaiThanhToan.THANH_CONG);
+        payment.setReferenceCode(generatePaymentReference());
+        payment.setBooking(booking);
+        payment.setInvoice(invoice);
+        payment.setCashierStaff(cashier);
+
+        thanhToanRepository.save(payment);
+
+        return new InvoicePaymentResponse(
+                bookingCode,
+                invoice.getInvoiceNumber(),
+                invoice.getRoomFee(),
+                invoice.getServiceFee(),
+                invoice.getTotalAmount(),
+                invoice.getDeductedDeposit(),
+                payment.getAmount(),
+                invoice.getRemainingAmount(),
+                payment.getPaymentMethod(),
+                invoice.getStatus(),
+                "Thanh toán hóa đơn thành công"
+        );
+    }
+
+    private InvoiceCalculation calculateInvoice(Booking booking) {
         List<BookingDetail> details = bookingDetailRepository.findByBookingId(booking.getId());
 
         if (details.isEmpty()) {
@@ -41,76 +150,90 @@ public class BillingService {
 
         List<ServiceChargeResponse> serviceCharges = calculateServiceCharges(booking.getId());
 
-        BigDecimal roomFee = roomCharges.stream()
+        BigDecimal roomFee = roomCharges
+                .stream()
                 .map(RoomChargeResponse::amount)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        BigDecimal serviceFee = serviceCharges.stream()
+        BigDecimal serviceFee = serviceCharges
+                .stream()
                 .map(ServiceChargeResponse::amount)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         BigDecimal subtotal = roomFee.add(serviceFee);
 
-        BigDecimal depositDeducted = valueOrZero(thanhToanRepository.sumSuccessfulDepositByBookingId(booking.getId()));
+        BigDecimal deposit = valueOrZero(
+                thanhToanRepository.sumSuccessfulDepositByBookingId(booking.getId())
+        );
 
-        BigDecimal remainingAmount = subtotal.subtract(depositDeducted).max(BigDecimal.ZERO);
+        BigDecimal remaining = subtotal
+                .subtract(deposit)
+                .max(BigDecimal.ZERO);
 
-        return new InvoicePreviewResponse(
-                bookingCode,
+        return new InvoiceCalculation(
                 roomFee,
                 serviceFee,
                 subtotal,
-                depositDeducted,
-                remainingAmount,
+                deposit,
+                remaining,
                 roomCharges,
                 serviceCharges
         );
-    }
-
-
-    private List<ServiceChargeResponse> calculateServiceCharges(String id) {
-        List<ServiceChargeResponse> result = suDungDichVuRepository.findByBookingId(id)
-                .stream()
-                .map(this::toServiceChargeResponse)
-                .toList();
-
-        return result;
     }
 
     private List<RoomChargeResponse> calculateRoomCharges(List<BookingDetail> details) {
         List<RoomChargeResponse> result = new ArrayList<>();
 
         for (BookingDetail detail : details) {
-            List<ChiTietGiaPhong> prices = chiTietGiaPhongRepository.findByBookingDetailIdOrderByStayDate(detail.getId());
+            List<ChiTietGiaPhong> prices = chiTietGiaPhongRepository
+                    .findByBookingDetailIdOrderByStayDate(detail.getId());
 
             if (prices.isEmpty()) {
                 throw new IllegalStateException("Không tìm thấy bảng giá cho phòng " + detail.getRoom().getRoomNumber());
             }
 
             for (ChiTietGiaPhong price : prices) {
-                BigDecimal amount = valueOrZero(price.getPrice());
+                BigDecimal unitPrice = valueOrZero(price.getPrice());
+                BigDecimal amount = unitPrice;
 
                 result.add(new RoomChargeResponse(
                         detail.getRoom().getRoomNumber(),
                         price.getStayDate(),
-                        amount,
+                        unitPrice,
                         amount
                 ));
             }
         }
+
         return result;
     }
 
-    private ServiceChargeResponse toServiceChargeResponse(SuDungDichVu serviceUsage) {
-        BigDecimal quantity = valueOrZero(serviceUsage.getSoLuong());
-        BigDecimal unitPrice = valueOrZero(serviceUsage.getDonGiaApDung());
-        BigDecimal amount = quantity.multiply(unitPrice);
-        return new ServiceChargeResponse(
-                serviceUsage.getDichVu().getTen(),
-                quantity,
-                unitPrice,
-                amount
-        );
+    private List<ServiceChargeResponse> calculateServiceCharges(
+            String bookingId
+    ) {
+        return suDungDichVuRepository
+                .findByBookingId(bookingId)
+                .stream()
+                .map(serviceUsage -> {
+                    BigDecimal quantity = valueOrZero(serviceUsage.getSoLuong());
+
+                    BigDecimal unitPrice = valueOrZero(serviceUsage.getDonGiaApDung());
+
+                    BigDecimal amount = quantity.multiply(unitPrice);
+
+                    return new ServiceChargeResponse(
+                            serviceUsage.getDichVu().getTen(),
+                            quantity,
+                            unitPrice,
+                            amount
+                    );
+                })
+                .toList();
+    }
+
+    private Booking getBooking(String bookingCode) {
+        return bookingRepository.findByBookingCode(bookingCode)
+                .orElseThrow(() -> new BookingNotFoundException("Không tìm thấy đặt phòng với mã " + bookingCode));
     }
 
     private void validateBookingCanBeBilled(Booking booking) {
@@ -119,11 +242,44 @@ public class BillingService {
         }
 
         if (booking.getStatus() != BookingStatus.DA_NHAN) {
-            throw new InvalidBookingStateException("Chỉ tính hóa đơn cho khách đang lưu trú");
+            throw new InvalidBookingStateException("Chỉ lập hóa đơn cho khách đang lưu trú");
         }
+    }
+
+    private String generateUniqueInvoiceNumber() {
+        String invoiceNumber;
+
+        do {
+            String randomPart = UUID.randomUUID()
+                    .toString()
+                    .replace("-", "")
+                    .substring(0, 18);
+
+            invoiceNumber = "HD" + randomPart;
+        } while (hoaDonRepository.existsByInvoiceNumber(invoiceNumber));
+
+        return invoiceNumber;
+    }
+
+    private String generatePaymentReference() {
+        return "PAY-" + UUID.randomUUID()
+                .toString()
+                .replace("-", "")
+                .substring(0, 28);
     }
 
     private BigDecimal valueOrZero(BigDecimal value) {
         return value == null ? BigDecimal.ZERO : value;
+    }
+
+    private record InvoiceCalculation(
+            BigDecimal roomFee,
+            BigDecimal serviceFee,
+            BigDecimal subtotal,
+            BigDecimal deposit,
+            BigDecimal remaining,
+            List<RoomChargeResponse> roomCharges,
+            List<ServiceChargeResponse> serviceCharges
+    ) {
     }
 }

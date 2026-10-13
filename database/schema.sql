@@ -186,7 +186,9 @@ CREATE TABLE IF NOT EXISTS hoa_don (
     trang_thai trang_thai_hoa_don_enum NOT NULL,
     thoi_gian_chot TIMESTAMP,
     nhan_vien_chot_id VARCHAR(36),
-    FOREIGN KEY (nhan_vien_chot_id) REFERENCES nhan_vien(ma_nhan_vien) ON DELETE SET NULL
+    phieu_dat_phong_id VARCHAR(36) UNIQUE,
+    FOREIGN KEY (nhan_vien_chot_id) REFERENCES nhan_vien(ma_nhan_vien) ON DELETE SET NULL,
+    FOREIGN KEY (phieu_dat_phong_id) REFERENCES phieu_dat_phong(id) ON DELETE RESTRICT
 );
 
 DO $$ BEGIN
