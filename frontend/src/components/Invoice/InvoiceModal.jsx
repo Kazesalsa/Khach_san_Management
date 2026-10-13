@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import axios from 'axios';
 import Badge from '../ui/Badge';
 import Button from '../ui/Button';
 import { createCheckoutPayment, redirectToPayOS } from '../../services/paymentService';
@@ -33,6 +34,7 @@ export default function InvoiceModal({ isOpen, onClose, room, onPaymentConfirmed
   const [cashInput,      setCashInput]      = useState('');
   const [payDone,        setPayDone]        = useState(false);
   const [isPayOSLoading, setIsPayOSLoading] = useState(false);
+  const [isCashLoading,  setIsCashLoading]  = useState(false);
   const [payOSError,     setPayOSError]     = useState('');
 
   if (!room) return null;
@@ -85,12 +87,26 @@ export default function InvoiceModal({ isOpen, onClose, room, onPaymentConfirmed
     setTimeout(() => { printWindow.print(); printWindow.close(); }, 400);
   };
 
-  const handleConfirmPayment = () => {
-    setPayDone(true);
-    setTimeout(() => {
-      if (onPaymentConfirmed) onPaymentConfirmed(room.id);
-      onClose();
-    }, 2000);
+  const handleConfirmPayment = async () => {
+    setIsCashLoading(true);
+    setPayOSError('');
+    try {
+      const token = localStorage.getItem('authToken') || sessionStorage.getItem('authToken');
+      await axios.post(
+        `/api/bookings/${room.bookingCode}/invoice/pay`,
+        { paymentMethod: 'TIEN_MAT' },
+        { headers: token ? { Authorization: `Bearer ${token}` } : {} }
+      );
+      setPayDone(true);
+      setTimeout(() => {
+        if (onPaymentConfirmed) onPaymentConfirmed(room.id);
+        onClose();
+      }, 2000);
+    } catch (err) {
+      console.error('Lỗi thanh toán hóa đơn tiền mặt:', err);
+      setPayOSError(err.response?.data?.message || err.message || 'Lỗi xử lý thanh toán tiền mặt');
+      setIsCashLoading(false);
+    }
   };
 
   const handlePayOSCheckout = async () => {
@@ -444,15 +460,21 @@ export default function InvoiceModal({ isOpen, onClose, room, onPaymentConfirmed
                       <div className="pt-2 space-y-2">
                         {payMethod === 'cash' ? (
                           <>
+                            {payOSError && (
+                              <div className="w-full p-2.5 rounded-lg bg-rose-50 border border-rose-200 text-xs text-danger-custom text-left mb-2">
+                                {payOSError}
+                              </div>
+                            )}
                             <Button
                               variant="secondary"
                               size="lg"
                               fullWidth
                               iconLeft="check_circle"
-                              isDisabled={!canConfirm}
+                              isLoading={isCashLoading}
+                              isDisabled={!canConfirm || isCashLoading}
                               onClick={handleConfirmPayment}
                             >
-                              Xác nhận đã thu đủ tiền & Mở khóa trả phòng
+                              {isCashLoading ? 'Đang ghi nhận thanh toán…' : 'Xác nhận đã thu đủ tiền & Mở khóa trả phòng'}
                             </Button>
                             {!canConfirm && cashAmount > 0 && (
                               <p className="text-center text-[11px] text-danger-custom flex items-center justify-center gap-1">
