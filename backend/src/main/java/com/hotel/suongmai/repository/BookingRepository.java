@@ -12,6 +12,8 @@ import java.util.Optional;
 @Repository
 public interface BookingRepository extends JpaRepository<Booking, String> {
 
+    boolean existsByBookingCode(String bookingCode);
+
     Optional<Booking> findByBookingCode(String bookingCode);
     @Query("""
             SELECT COUNT(detail) > 0 FROM BookingDetail detail
