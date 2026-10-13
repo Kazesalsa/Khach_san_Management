@@ -8,7 +8,6 @@ import {
   ResponsiveContainer,
 } from 'recharts';
 import Badge from '../../components/ui/Badge';
-import Button from '../../components/ui/Button';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 const formatVND = (v) =>
@@ -140,7 +139,7 @@ export default function RevenueDashboardPage() {
   // Dữ liệu biểu đồ theo ngày từ Backend
   const filtered = useMemo(() => {
     return (revenueReport?.byDay ?? []).map((item) => {
-      const [year, month, day] = item.period.split('-');
+      const [, month, day] = item.period.split('-');
 
       return {
         date: item.period,

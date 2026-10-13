@@ -2,11 +2,13 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import Button from '../ui/Button';
 import Badge from '../ui/Badge';
+import { DEFAULT_ROOM_IMAGE } from '../../services/roomService';
 
 const RoomCard = ({
   room,
   onViewDetail,
   onBookNow,
+  onOpenGallery,
   index = 0,
 }) => {
   const isSoldOut = room.status.type === 'sold-out' || room.status.availableCount === 0;
@@ -15,6 +17,8 @@ const RoomCard = ({
   const formatPrice = (val) => {
     return new Intl.NumberFormat('vi-VN').format(val) + '₫';
   };
+
+  const primaryImage = (room.images && room.images[0]?.url) || DEFAULT_ROOM_IMAGE;
 
   return (
     <motion.article
@@ -25,12 +29,19 @@ const RoomCard = ({
       data-category={room.category}
     >
       {/* Media Column (Desktop 5 cols, Mobile 12 cols) */}
-      <div className="lg:col-span-5 relative overflow-hidden h-72 sm:h-80 lg:h-auto min-h-[280px]">
+      <div 
+        className="lg:col-span-5 relative overflow-hidden h-72 sm:h-80 lg:h-auto min-h-[280px] cursor-pointer"
+        onClick={() => (onOpenGallery ? onOpenGallery(room, 0) : onViewDetail(room))}
+      >
         <img
-          src={room.images[0]?.url}
+          src={primaryImage}
           alt={room.name}
           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
           loading="lazy"
+          onError={(e) => {
+            e.currentTarget.onerror = null;
+            e.currentTarget.src = DEFAULT_ROOM_IMAGE;
+          }}
         />
 
         {/* Room Status Badge */}
@@ -54,13 +65,25 @@ const RoomCard = ({
           </Badge>
         </div>
 
-        {/* Photo Gallery Counter */}
-        <div className="absolute bottom-4 left-4 px-3 py-1.5 rounded-lg bg-surface/90 backdrop-blur-md text-primary flex items-center gap-1.5 text-xs font-semibold shadow-sm z-10">
-          <span className="material-symbols-outlined text-accent text-[18px]">
+        {/* Photo Gallery Counter Button */}
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            if (onOpenGallery) {
+              onOpenGallery(room, 0);
+            } else {
+              onViewDetail(room);
+            }
+          }}
+          className="absolute bottom-4 left-4 px-3 py-1.5 rounded-lg bg-surface/90 hover:bg-surface active:scale-95 backdrop-blur-md text-primary flex items-center gap-1.5 text-xs font-semibold shadow-sm z-10 transition-all cursor-pointer border border-border-custom/50 hover:border-accent group/btn"
+          title="Xem album ảnh thực tế của phòng"
+        >
+          <span className="material-symbols-outlined text-accent text-[18px] group-hover/btn:scale-110 transition-transform">
             photo_camera
           </span>
-          <span>{room.images.length} ảnh thực tế</span>
-        </div>
+          <span>{room.images?.length || 0} ảnh thực tế</span>
+        </button>
 
         {/* Mobile Gradient Overlay */}
         <div className="lg:hidden absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent pointer-events-none" />

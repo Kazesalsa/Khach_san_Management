@@ -107,7 +107,7 @@ function CheckoutModal({ room, onClose, onConfirmed }) {
             <div className="w-14 h-14 rounded-full bg-emerald-100 border border-emerald-300 flex items-center justify-center mb-4">
               <span className="material-symbols-outlined text-[32px] text-emerald-700">check_circle</span>
             </div>
-            <h3 className="font-headline text-xl font-bold text-primary mb-2">Trả phòng thành công!</h3>
+            <h3 className="text-xl font-bold text-primary mb-2">Trả phòng thành công!</h3>
             <p className="text-sm text-text-secondary mb-1">
               Phòng <strong className="text-primary">{room.roomNumber}</strong> · {room.bookingCode}
             </p>
@@ -121,7 +121,7 @@ function CheckoutModal({ room, onClose, onConfirmed }) {
             {/* Header */}
             <div className="px-6 py-4 border-b border-border-custom flex items-start justify-between gap-4 bg-background/50">
               <div>
-                <h3 className="font-headline text-xl font-bold text-primary">Xác Nhận Trả Phòng</h3>
+                <h3 className="text-lg font-bold text-primary">Xác Nhận Trả Phòng</h3>
                 <p className="text-xs text-text-secondary mt-0.5">
                   Phòng {room.roomNumber} · {room.bookingCode}
                 </p>
@@ -136,13 +136,10 @@ function CheckoutModal({ room, onClose, onConfirmed }) {
 
             <div className="p-6 space-y-4">
               {/* Thông tin khách */}
-              <div className="flex items-center gap-3 p-3.5 bg-background rounded-xl border border-border-custom">
-                <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                  <span className="material-symbols-outlined text-primary text-[20px]">person</span>
-                </div>
+              <div className="flex items-center justify-between p-3.5 bg-background rounded-xl border border-border-custom">
                 <div>
                   <p className="font-bold text-primary">{room.guestName}</p>
-                  <p className="text-xs text-text-secondary">{room.phone} · {room.roomType} · Tầng {room.floor}</p>
+                  <p className="text-xs text-text-secondary mt-0.5">{room.phone} · {room.roomType} · Tầng {room.floor}</p>
                 </div>
                 <Badge variant={room.paymentStatus === 'paid' ? 'success' : 'warning'} dot className="ml-auto shrink-0">
                   {room.paymentStatus === 'paid' ? 'Đã TT' : 'Chưa TT'}
@@ -152,14 +149,13 @@ function CheckoutModal({ room, onClose, onConfirmed }) {
               {/* Chi tiết lưu trú */}
               <div className="grid grid-cols-2 gap-3 text-xs">
                 {[
-                  { icon: 'login',       label: 'Nhận phòng', value: formatDate(room.checkIn) },
-                  { icon: 'logout',      label: 'Trả phòng',  value: formatDate(room.checkOut) },
-                  { icon: 'nights_stay', label: 'Số đêm',     value: `${room.nights} đêm` },
-                  { icon: 'group',       label: 'Số khách',   value: `${room.adults} NL${room.children > 0 ? ` · ${room.children} TE` : ''}` },
-                ].map(({ icon, label, value }) => (
+                  { label: 'Nhận phòng', value: formatDate(room.checkIn) },
+                  { label: 'Trả phòng',  value: formatDate(room.checkOut) },
+                  { label: 'Số đêm',     value: `${room.nights} đêm` },
+                  { label: 'Số khách',   value: `${room.adults} người lớn${room.children > 0 ? ` · ${room.children} trẻ em` : ''}` },
+                ].map(({ label, value }) => (
                   <div key={label} className="flex flex-col gap-0.5 p-3 bg-surface-alt/50 rounded-xl">
-                    <span className="flex items-center gap-1 text-[10px] uppercase tracking-wider text-text-secondary font-semibold">
-                      <span className="material-symbols-outlined text-accent text-[13px]">{icon}</span>
+                    <span className="text-xs text-text-secondary font-medium">
                       {label}
                     </span>
                     <span className={`font-bold ${label === 'Trả phòng' && daysLeft <= 0 ? 'text-danger-custom' : 'text-primary'}`}>
@@ -272,7 +268,7 @@ function RoomCard({ room, onOpenCheckout, onOpenInvoice }) {
         <div className="flex items-start justify-between gap-3 mb-3">
           <div>
             <div className="flex items-center gap-2">
-              <span className="font-headline text-2xl font-bold text-primary group-hover:text-accent transition-colors">
+              <span className="text-xl font-bold text-primary">
                 Phòng {room.roomNumber}
               </span>
               <Badge variant={room.paymentStatus === 'paid' ? 'success' : 'warning'} dot>
@@ -295,34 +291,29 @@ function RoomCard({ room, onOpenCheckout, onOpenInvoice }) {
         </div>
 
         {/* Thông tin khách */}
-        <div className="flex items-center gap-2.5 mb-3 p-3 bg-background rounded-xl border border-border-custom/60">
-          <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-            <span className="material-symbols-outlined text-primary text-[18px]">person</span>
-          </div>
-          <div className="min-w-0">
-            <p className="font-bold text-primary text-sm truncate">{room.guestName}</p>
-            <p className="text-[11px] text-text-secondary">
-              {room.phone} · {room.adults} NL{room.children > 0 ? ` · ${room.children} TE` : ''}
-            </p>
-          </div>
+        <div className="mb-3 p-3 bg-background rounded-xl border border-border-custom/60">
+          <p className="font-bold text-primary text-sm truncate">{room.guestName}</p>
+          <p className="text-xs text-text-secondary mt-0.5">
+            {room.phone} · {room.adults} người lớn{room.children > 0 ? ` · ${room.children} trẻ em` : ''}
+          </p>
         </div>
 
         {/* Thông tin booking */}
         <div className="grid grid-cols-2 gap-2 mb-3 text-xs">
           <div className="flex flex-col gap-0.5">
-            <span className="text-[10px] uppercase tracking-wider text-text-secondary font-semibold">Mã đặt phòng</span>
+            <span className="text-xs text-text-secondary font-medium">Mã đặt phòng</span>
             <span className="font-bold text-primary">{room.bookingCode}</span>
           </div>
           <div className="flex flex-col gap-0.5">
-            <span className="text-[10px] uppercase tracking-wider text-text-secondary font-semibold">Số đêm</span>
+            <span className="text-xs text-text-secondary font-medium">Số đêm</span>
             <span className="font-bold text-primary">{room.nights} đêm</span>
           </div>
           <div className="flex flex-col gap-0.5">
-            <span className="text-[10px] uppercase tracking-wider text-text-secondary font-semibold">Nhận phòng</span>
+            <span className="text-xs text-text-secondary font-medium">Nhận phòng</span>
             <span className="font-semibold text-text-primary">{formatDate(room.checkIn)}</span>
           </div>
           <div className="flex flex-col gap-0.5">
-            <span className="text-[10px] uppercase tracking-wider text-text-secondary font-semibold">Trả phòng</span>
+            <span className="text-xs text-text-secondary font-medium">Trả phòng</span>
             <span className={`font-semibold ${daysLeft <= 0 ? 'text-danger-custom' : 'text-text-primary'}`}>
               {formatDate(room.checkOut)}
             </span>
@@ -332,17 +323,17 @@ function RoomCard({ room, onOpenCheckout, onOpenInvoice }) {
         {/* Tiền */}
         <div className="border-t border-border-custom/60 pt-3 flex items-center justify-between">
           <div>
-            <p className="text-[10px] uppercase tracking-wider text-text-secondary font-semibold">Tổng tiền</p>
-            <p className="font-headline text-base font-bold text-primary">{formatVND(room.totalAmount)}</p>
+            <p className="text-xs text-text-secondary font-medium">Tổng tiền</p>
+            <p className="text-base font-bold text-primary">{formatVND(room.totalAmount)}</p>
           </div>
           {room.paymentStatus === 'unpaid' ? (
             <div className="text-right">
-              <p className="text-[10px] uppercase tracking-wider text-amber-600 font-semibold">Còn phải thu</p>
+              <p className="text-xs text-amber-600 font-medium">Còn phải thu</p>
               <p className="font-bold text-amber-700">{formatVND(remaining)}</p>
             </div>
           ) : (
             <div className="text-right">
-              <p className="text-[10px] uppercase tracking-wider text-success-custom font-semibold">Đã thanh toán</p>
+              <p className="text-xs text-success-custom font-medium">Đã thanh toán</p>
               <p className="font-bold text-success-custom">{formatVND(room.depositPaid)}</p>
             </div>
           )}
@@ -350,18 +341,17 @@ function RoomCard({ room, onOpenCheckout, onOpenInvoice }) {
 
         {/* Hint click */}
         <div className="mt-3 flex gap-2" onClick={(e) => e.stopPropagation()}>
-          <Button variant="outline" size="sm" iconLeft="receipt_long" className="flex-1"
+          <Button variant="outline" size="sm" className="flex-1"
             onClick={(e) => { e.stopPropagation(); onOpenInvoice(room); }}>
             Hóa đơn
           </Button>
           <Button
-            variant="secondary" size="sm" iconLeft="logout" className="flex-1"
+            variant="secondary" size="sm" className="flex-1"
             onClick={(e) => { e.stopPropagation(); onOpenCheckout(room); }}>
             Trả phòng
           </Button>
         </div>
-        <div className="mt-2 flex items-center justify-center gap-1.5 text-[11px] text-text-secondary group-hover:text-accent transition-colors">
-          <span className="material-symbols-outlined text-[15px]">touch_app</span>
+        <div className="mt-2 text-center text-xs text-text-secondary">
           Bấm thẻ để xác nhận trả phòng
         </div>
       </div>
@@ -379,7 +369,6 @@ export default function CheckoutListPage() {
   }, []);
 
   const [rooms, setRooms] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [fetchNotice, setFetchNotice] = useState('');
 
   useEffect(() => {
@@ -537,9 +526,9 @@ export default function CheckoutListPage() {
         <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6">
           <div className="flex items-start justify-between gap-4">
             <div>
-              <p className="text-accent text-xs font-bold uppercase tracking-[0.2em]">Sương Mai Hotel</p>
-              <h1 className="font-headline text-2xl sm:text-3xl font-bold mt-1">Danh Sách Phòng Cần Trả</h1>
-              <p className="text-text-on-dark/70 text-sm mt-2">
+              <p className="text-accent text-xs font-semibold">Sương Mai Hotel</p>
+              <h1 className="text-2xl sm:text-3xl font-bold mt-1">Danh Sách Phòng Cần Trả</h1>
+              <p className="text-text-on-dark/70 text-sm mt-1">
                 Bấm vào thẻ phòng để xem chi tiết và xác nhận trả phòng
               </p>
             </div>
@@ -571,27 +560,18 @@ export default function CheckoutListPage() {
         {/* Stat cards */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div className="bg-surface rounded-2xl border border-border-custom shadow-sm p-5">
-            <div className="flex items-center gap-2 mb-1">
-              <span className="material-symbols-outlined text-accent text-[20px]">hotel</span>
-              <p className="text-xs uppercase tracking-wider text-text-secondary">Đang có khách</p>
-            </div>
-            <p className="font-headline text-3xl font-bold text-primary">{rooms.length}</p>
+            <p className="text-xs text-text-secondary font-medium">Đang có khách</p>
+            <p className="text-3xl font-bold text-primary mt-1">{rooms.length}</p>
             <p className="text-xs text-text-secondary mt-1">phòng đang hoạt động</p>
           </div>
           <div className="bg-surface rounded-2xl border border-emerald-200 shadow-sm p-5">
-            <div className="flex items-center gap-2 mb-1">
-              <span className="material-symbols-outlined text-emerald-600 text-[20px]">check_circle</span>
-              <p className="text-xs uppercase tracking-wider text-text-secondary">Đã thanh toán</p>
-            </div>
-            <p className="font-headline text-3xl font-bold text-success-custom">{paidCount}</p>
+            <p className="text-xs text-text-secondary font-medium">Đã thanh toán</p>
+            <p className="text-3xl font-bold text-success-custom mt-1">{paidCount}</p>
             <p className="text-xs text-text-secondary mt-1">phòng đã thanh toán đủ</p>
           </div>
           <div className="bg-surface rounded-2xl border border-amber-200 shadow-sm p-5">
-            <div className="flex items-center gap-2 mb-1">
-              <span className="material-symbols-outlined text-amber-600 text-[20px]">pending</span>
-              <p className="text-xs uppercase tracking-wider text-text-secondary">Chưa thanh toán</p>
-            </div>
-            <p className="font-headline text-3xl font-bold text-amber-600">{unpaidCount}</p>
+            <p className="text-xs text-text-secondary font-medium">Chưa thanh toán</p>
+            <p className="text-3xl font-bold text-amber-600 mt-1">{unpaidCount}</p>
             <p className="text-xs text-text-secondary mt-1">phòng cần thu tiền</p>
           </div>
         </div>
