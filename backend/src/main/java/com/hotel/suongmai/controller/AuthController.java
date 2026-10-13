@@ -5,6 +5,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+import com.hotel.suongmai.dto.ForgotPasswordRequest;
+import com.hotel.suongmai.dto.ForgotPasswordResponse;
 import com.hotel.suongmai.dto.LoginRequest;
 import com.hotel.suongmai.dto.LoginResponse;
 import com.hotel.suongmai.dto.ProfileResponse;
@@ -31,6 +33,11 @@ public class AuthController {
     @PostMapping("/register")
     public ResponseEntity<RegisterResponse> register(@Valid @RequestBody RegisterRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(authService.register(request));
+    }
+
+    @PostMapping("/forgot-password")
+    public ResponseEntity<ForgotPasswordResponse> forgotPassword(@Valid @RequestBody ForgotPasswordRequest request) {
+        return ResponseEntity.ok(authService.forgotPassword(request));
     }
 
     @GetMapping("/me")
