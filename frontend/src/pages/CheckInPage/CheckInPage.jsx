@@ -1,64 +1,11 @@
-import { confirmCheckIn } from '../../services/checkInService';
+import {
+  confirmCheckIn,
+  getPendingCheckInBookings,
+} from '../../services/checkInService';
 import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import Badge from '../../components/ui/Badge';
 import Button from '../../components/ui/Button';
-
-// ─── Dữ liệu mẫu ─────────────────────────────────────────────────────────────
-const MOCK_BOOKINGS = [
-  {
-    bookingCode: 'SM-482031',
-    phone: '0912345678',
-    guestName: 'Nguyễn Văn An',
-    email: 'an.nguyen@email.com',
-    adults: 2, children: 0,
-    roomNumber: '101', roomType: 'Standard', floor: 1,
-    checkIn: '2026-10-12', checkOut: '2026-10-14', nights: 2,
-    totalAmount: 2400000, depositPaid: 720000,
-    roomStatus: 'clean',     // 'clean' | 'dirty' | 'cleaning'
-    checkinStatus: 'pending', // 'pending' | 'checked_in'
-    note: '',
-  },
-  {
-    bookingCode: 'SM-719204',
-    phone: '0987654321',
-    guestName: 'Trần Thị Bích',
-    email: 'bich.tran@email.com',
-    adults: 2, children: 1,
-    roomNumber: '203', roomType: 'Deluxe Ban Công', floor: 2,
-    checkIn: '2026-10-12', checkOut: '2026-10-15', nights: 3,
-    totalAmount: 5400000, depositPaid: 1620000,
-    roomStatus: 'dirty',
-    checkinStatus: 'pending',
-    note: 'Yêu cầu tầng cao, giường đôi',
-  },
-  {
-    bookingCode: 'SM-330587',
-    phone: '0903111222',
-    guestName: 'Lê Minh Khoa',
-    email: 'khoa.le@email.com',
-    adults: 3, children: 0,
-    roomNumber: '305', roomType: 'Premier Suite', floor: 3,
-    checkIn: '2026-10-12', checkOut: '2026-10-16', nights: 4,
-    totalAmount: 11200000, depositPaid: 3360000,
-    roomStatus: 'cleaning',
-    checkinStatus: 'pending',
-    note: '',
-  },
-  {
-    bookingCode: 'SM-965412',
-    phone: '0978333444',
-    guestName: 'Hoàng Đức Tài',
-    email: 'tai.hoang@email.com',
-    adults: 2, children: 2,
-    roomNumber: '401', roomType: 'Executive King', floor: 4,
-    checkIn: '2026-10-12', checkOut: '2026-10-15', nights: 3,
-    totalAmount: 10500000, depositPaid: 3150000,
-    roomStatus: 'clean',
-    checkinStatus: 'checked_in',
-    note: 'VIP - ưu tiên phục vụ',
-  },
-];
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 const formatVND = (n) =>
@@ -76,37 +23,97 @@ const ROOM_STATUS_CONFIG = {
   dirty:    { label: 'Phòng chưa dọn',        variant: 'danger',  icon: 'warning',          warn: true  },
 };
 
+const getBookingRoomStatus = (booking) => {
+  const rooms = Array.isArray(booking.rooms) ? booking.rooms : [];
+
+  if (rooms.length === 0) return 'dirty';
+
+  if (rooms.some((room) => room.cleaningStatus === 'CHUA_DON')) {
+    return 'dirty';
+  }
+
+  if (rooms.some((room) => room.cleaningStatus === 'DANG_DON')) {
+    return 'cleaning';
+  }
+
+  if (rooms.every((room) => room.cleaningStatus === 'DA_DON_XONG')) {
+    return 'clean';
+  }
+
+  return 'dirty';
+};
+
 // ─── Booking Card ─────────────────────────────────────────────────────────────
-function BookingCard({ booking, onCheckIn, busy }) {
-  const rs   = ROOM_STATUS_CONFIG[booking.roomStatus] || ROOM_STATUS_CONFIG.clean;
-  const done = booking.checkinStatus === 'checked_in';
+function BookingCard({ booking, onCheckIn, busy, disabled }) {
+  const roomStatus = getBookingRoomStatus(booking);
+  const rs = ROOM_STATUS_CONFIG[roomStatus];
+  const done = booking.bookingStatus === 'DA_NHAN';
 
   return (
     <div className={`bg-surface rounded-2xl border shadow-sm overflow-hidden transition-all ${
       done ? 'border-emerald-200 opacity-80' : rs.warn ? 'border-amber-200' : 'border-border-custom'
     }`}>
       {/* Top bar */}
-      <div className={`h-1 w-full ${done ? 'bg-emerald-500' : rs.warn ? booking.roomStatus === 'dirty' ? 'bg-danger-custom' : 'bg-amber-400' : 'bg-accent'}`} />
+      <div className={`h-1 w-full ${done ? 'bg-emerald-500' : rs.warn ? roomStatus === 'dirty' ? 'bg-danger-custom' : 'bg-amber-400' : 'bg-accent'}`} />
 
       <div className="p-5 space-y-4">
         {/* Header */}
         <div className="flex items-start justify-between gap-3">
           <div>
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="font-headline text-lg font-bold text-primary">Phòng {booking.roomNumber}</span>
+              <span className="font-headline text-lg font-bold text-primary">
+                Đặt phòng {booking.bookingCode}
+              </span>
               <Badge variant={done ? 'success' : 'default'} dot>
                 {done ? 'Đã check-in' : 'Chờ check-in'}
               </Badge>
             </div>
-            <p className="text-xs text-text-secondary mt-0.5">{booking.roomType} · Tầng {booking.floor}</p>
+            <p className="text-xs text-text-secondary mt-1">
+              {booking.rooms?.length || 0} phòng trong đặt phòng
+            </p>
           </div>
-          <span className="text-xs font-bold text-accent">{booking.bookingCode}</span>
+        </div>
+
+        {/* Danh sách phòng thuộc booking */}
+        <div className="space-y-2">
+          {booking.rooms?.map((room) => (
+            <div
+              key={room.roomId}
+              className="flex items-center justify-between gap-3 p-3 rounded-xl bg-background border border-border-custom"
+            >
+              <div>
+                <p className="text-sm font-bold text-primary">
+                  Phòng {room.roomNumber}
+                </p>
+                <p className="text-xs text-text-secondary">
+                  {room.roomType} · Tầng {room.floor}
+                </p>
+              </div>
+
+              <Badge
+                variant={
+                  room.cleaningStatus === 'DA_DON_XONG'
+                    ? 'success'
+                    : room.cleaningStatus === 'DANG_DON'
+                      ? 'warning'
+                      : 'danger'
+                }
+                dot
+              >
+                {room.cleaningStatus === 'DA_DON_XONG'
+                  ? 'Đã dọn xong'
+                  : room.cleaningStatus === 'DANG_DON'
+                    ? 'Đang dọn'
+                    : 'Chưa sẵn sàng'}
+              </Badge>
+            </div>
+          ))}
         </div>
 
         {/* Cảnh báo phòng chưa dọn */}
         {rs.warn && !done && (
           <div className={`flex items-center gap-2.5 p-3 rounded-xl border text-xs font-semibold ${
-            booking.roomStatus === 'dirty'
+            roomStatus === 'dirty'
               ? 'bg-rose-50 border-rose-200 text-danger-custom'
               : 'bg-amber-50 border-amber-200 text-amber-700'
           }`}>
@@ -123,26 +130,68 @@ function BookingCard({ booking, onCheckIn, busy }) {
           <div className="min-w-0">
             <p className="font-bold text-primary truncate">{booking.guestName}</p>
             <p className="text-[11px] text-text-secondary">{booking.phone} · {booking.email}</p>
-            <p className="text-[11px] text-text-secondary">{booking.adults} người lớn{booking.children > 0 ? ` · ${booking.children} trẻ em` : ''}</p>
+            <p className="text-[11px] text-text-secondary">
+              Tổng số khách:{' '}
+              {(booking.rooms ?? []).reduce(
+                (total, room) => total + (Number(room.guestCount) || 0),
+                0
+              )}
+            </p>
           </div>
         </div>
 
         {/* Chi tiết đặt phòng */}
-        <div className="grid grid-cols-2 gap-2 text-xs">
-          {[
-            { icon: 'login',       label: 'Check-in',  value: formatDate(booking.checkIn)  },
-            { icon: 'logout',      label: 'Check-out', value: formatDate(booking.checkOut) },
-            { icon: 'nights_stay', label: 'Số đêm',    value: `${booking.nights} đêm`      },
-            { icon: 'payments',    label: 'Đã cọc',    value: formatVND(booking.depositPaid) },
-          ].map(({ icon, label, value }) => (
-            <div key={label} className="flex flex-col gap-0.5 p-2.5 bg-surface-alt/50 rounded-xl">
-              <span className="flex items-center gap-1 text-[10px] uppercase tracking-wider text-text-secondary font-semibold">
-                <span className="material-symbols-outlined text-accent text-[13px]">{icon}</span>
-                {label}
-              </span>
-              <span className="font-bold text-primary">{value}</span>
-            </div>
-          ))}
+        <div className="space-y-3">
+          <div className="grid grid-cols-2 gap-2 text-xs">
+            {[
+              {
+                icon: 'payments',
+                label: 'Tổng tiền dự kiến',
+                value: formatVND(booking.estimatedTotal ?? 0),
+              },
+              {
+                icon: 'account_balance_wallet',
+                label: 'Tiền cọc yêu cầu',
+                value: formatVND(booking.requiredDeposit ?? 0),
+              },
+            ].map(({ icon, label, value }) => (
+              <div
+                key={label}
+                className="flex flex-col gap-1 p-2.5 bg-surface-alt/50 rounded-xl"
+              >
+                <span className="flex items-center gap-1 text-[10px] uppercase tracking-wider text-text-secondary font-semibold">
+                  <span className="material-symbols-outlined text-accent text-[13px]">
+                    {icon}
+                  </span>
+                  {label}
+                </span>
+                <span className="font-bold text-primary">{value}</span>
+              </div>
+            ))}
+          </div>
+
+          {/* Ngày nhận/trả phòng theo từng phòng */}
+          <div className="space-y-2">
+            {(booking.rooms ?? []).map((room) => (
+              <div
+                key={room.roomId}
+                className="p-3 bg-surface-alt/50 rounded-xl text-xs space-y-1"
+              >
+                <p className="font-bold text-primary">
+                  Phòng {room.roomNumber}
+                </p>
+                <p className="text-text-secondary">
+                  Nhận phòng: {formatDate(room.checkIn)}
+                </p>
+                <p className="text-text-secondary">
+                  Trả phòng: {formatDate(room.checkOut)}
+                </p>
+                <p className="text-text-secondary">
+                  Số đêm: {room.nights} đêm · {room.guestCount} khách
+                </p>
+              </div>
+            ))}
+          </div>
         </div>
 
         {/* Ghi chú */}
@@ -187,9 +236,14 @@ function BookingCard({ booking, onCheckIn, busy }) {
             fullWidth
             iconLeft={busy ? undefined : 'how_to_reg'}
             isLoading={busy}
+            isDisabled={disabled || roomStatus !== 'clean' || booking.bookingStatus !== 'DA_DAT'}
             onClick={() => onCheckIn(booking)}
           >
-            {busy ? 'Đang xử lý…' : 'Xác nhận Check-in'}
+            {busy
+              ? 'Đang xử lý…'
+              : roomStatus !== 'clean'
+                ? 'Phòng chưa sẵn sàng'
+                : 'Xác nhận Check-in'}
           </Button>
         )}
       </div>
@@ -203,26 +257,63 @@ export default function CheckInPage() {
     document.title = 'Tiếp Nhận Check-in | Sương Mai Hotel';
   }, []);
 
-  const [bookings, setBookings] = useState(
-    import.meta.env.DEV ? MOCK_BOOKINGS : []
-  );
-  const [query,       setQuery]       = useState('');
-  const [busyId,      setBusyId]      = useState(null);
-  const [toast,       setToast]       = useState(null);
+  const [bookings, setBookings] = useState([]);
+  const [loadingBookings, setLoadingBookings] = useState(true);
+  const [bookingsError, setBookingsError] = useState('');
+  const [query, setQuery] = useState('');
+  const [busyId, setBusyId] = useState(null);
+  const [toast, setToast] = useState(null);
+  const [refreshKey, setRefreshKey] = useState(0);
   const inputRef = useRef(null);
+  const submittingRef = useRef(false);
+  const requestIdRef = useRef(0);
+
+  // Tải danh sách và tìm kiếm trên Backend; bỏ qua kết quả request cũ.
+  useEffect(() => {
+    let active = true;
+    const requestId = ++requestIdRef.current;
+
+    setLoadingBookings(true);
+    setBookingsError('');
+
+    const timer = setTimeout(async () => {
+      try {
+        const data = await getPendingCheckInBookings(query);
+        if (!active || requestId !== requestIdRef.current) return;
+        setBookings(data);
+      } catch (err) {
+        console.error('Không thể tải booking chờ check-in:', err);
+        if (!active || requestId !== requestIdRef.current) return;
+        setBookings([]);
+        setBookingsError(
+          err.response?.data?.message ||
+            'Không thể tải danh sách đặt phòng. Vui lòng thử lại sau.'
+        );
+      } finally {
+        if (active && requestId === requestIdRef.current) {
+          setLoadingBookings(false);
+        }
+      }
+    }, query.trim() ? 350 : 0);
+
+    return () => {
+      active = false;
+      clearTimeout(timer);
+    };
+  }, [query, refreshKey]);
 
   // Tự focus ô tìm kiếm khi load
   useEffect(() => { inputRef.current?.focus(); }, []);
 
-  const filtered = bookings.filter((b) => {
-    const q = query.trim().toLowerCase();
-    if (!q) return true;
-    return b.bookingCode.toLowerCase().includes(q) || b.phone.replace(/\s/g, '').includes(q.replace(/\s/g, ''));
-  });
-
-  const pendingCount    = bookings.filter((b) => b.checkinStatus === 'pending').length;
-  const checkedInCount  = bookings.filter((b) => b.checkinStatus === 'checked_in').length;
-  const warnCount       = bookings.filter((b) => b.roomStatus !== 'clean' && b.checkinStatus === 'pending').length;
+  // API chỉ trả booking DA_DAT, không cung cấp thống kê đã check-in hôm nay.
+  const pendingCount = bookings.length;
+  const readyCount = bookings.filter((b) => getBookingRoomStatus(b) === 'clean').length;
+  const warnCount = bookings.reduce(
+    (total, b) => total + (Array.isArray(b.rooms)
+      ? b.rooms.filter((room) => room.cleaningStatus !== 'DA_DON_XONG').length
+      : 0),
+    0
+  );
 
   const showToast = (msg, type = 'success') => {
     setToast({ msg, type });
@@ -230,31 +321,32 @@ export default function CheckInPage() {
   };
 
   const handleCheckIn = async (booking) => {
+    if (submittingRef.current) return;
+
+    if (booking.bookingStatus !== 'DA_DAT') {
+      showToast('Đặt phòng không ở trạng thái chờ check-in.', 'error');
+      return;
+    }
+
+    if (getBookingRoomStatus(booking) !== 'clean') {
+      showToast('Không thể check-in vì có phòng chưa dọn xong.', 'error');
+      return;
+    }
+
+    submittingRef.current = true;
     setBusyId(booking.bookingCode);
 
     try {
       const result = await confirmCheckIn(booking.bookingCode);
 
-      setBookings((prev) =>
-        prev.map((b) =>
-          b.bookingCode === booking.bookingCode
-            ? {
-                ...b,
-                checkinStatus: 'checked_in',
-                usageStatus: result.roomStatus,
-                actualCheckInTime: result.checkInTime,
-              }
-            : b
-        )
-      );
+      // GET pending chỉ chứa DA_DAT; booking đã check-in không còn ở danh sách.
+      requestIdRef.current += 1;
+      setBookings((prev) => prev.filter((b) => b.bookingCode !== booking.bookingCode));
+      setRefreshKey((value) => value + 1);
 
-      showToast(
-        result.message ||
-          `Check-in thành công! Phòng ${booking.roomNumber}`
-      );
+      showToast(result.message || `Check-in thành công! Đặt phòng ${booking.bookingCode}`);
     } catch (err) {
       const status = err.response?.status;
-
       const messages = {
         401: 'Phiên đăng nhập không hợp lệ hoặc đã hết hạn.',
         403: 'Bạn không có quyền thực hiện check-in.',
@@ -270,6 +362,7 @@ export default function CheckInPage() {
         'error'
       );
     } finally {
+      submittingRef.current = false;
       setBusyId(null);
     }
   };
@@ -303,15 +396,15 @@ export default function CheckInPage() {
               <p className="text-xs uppercase tracking-wider text-text-secondary">Chờ check-in</p>
             </div>
             <p className="font-headline text-3xl font-bold text-primary">{pendingCount}</p>
-            <p className="text-xs text-text-secondary mt-1">khách đang chờ</p>
+            <p className="text-xs text-text-secondary mt-1">đặt phòng đang chờ</p>
           </div>
           <div className="bg-surface rounded-2xl border border-emerald-200 shadow-sm p-5">
             <div className="flex items-center gap-2 mb-1">
               <span className="material-symbols-outlined text-emerald-600 text-[20px]">how_to_reg</span>
-              <p className="text-xs uppercase tracking-wider text-text-secondary">Đã check-in</p>
+              <p className="text-xs uppercase tracking-wider text-text-secondary">Sẵn sàng check-in</p>
             </div>
-            <p className="font-headline text-3xl font-bold text-success-custom">{checkedInCount}</p>
-            <p className="text-xs text-text-secondary mt-1">khách hôm nay</p>
+            <p className="font-headline text-3xl font-bold text-success-custom">{readyCount}</p>
+            <p className="text-xs text-text-secondary mt-1">đặt phòng đủ điều kiện</p>
           </div>
           <div className="bg-surface rounded-2xl border border-amber-200 shadow-sm p-5">
             <div className="flex items-center gap-2 mb-1">
@@ -330,7 +423,7 @@ export default function CheckInPage() {
             <input
               ref={inputRef}
               type="text"
-              placeholder="Nhập mã đặt phòng (SM-XXXXXX) hoặc số điện thoại khách..."
+              placeholder="Nhập mã đặt phòng hoặc số điện thoại khách..."
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               className="w-full bg-background border border-border-custom rounded-xl pl-12 pr-10 py-3 text-sm text-text-primary placeholder:text-text-secondary/60 focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20"
@@ -341,42 +434,65 @@ export default function CheckInPage() {
               </button>
             )}
           </div>
-          {query && (
+          {query && !loadingBookings && !bookingsError && (
             <p className="text-xs text-text-secondary mt-2.5">
-              Tìm thấy <strong className="text-primary">{filtered.length}</strong> kết quả cho &ldquo;{query}&rdquo;
+              Tìm thấy <strong className="text-primary">{bookings.length}</strong> kết quả cho &ldquo;{query}&rdquo;
             </p>
           )}
         </div>
 
         {/* Danh sách booking */}
-        {filtered.length === 0 ? (
+        {loadingBookings ? (
+          <div className="bg-surface rounded-2xl border border-border-custom shadow-sm p-14 text-center space-y-3">
+            <span className="material-symbols-outlined text-4xl text-accent animate-spin inline-block">progress_activity</span>
+            <p className="text-sm text-text-secondary">Đang tải danh sách đặt phòng...</p>
+          </div>
+        ) : bookingsError ? (
+          <div className="bg-surface rounded-2xl border border-border-custom shadow-sm p-14 flex flex-col items-center text-center gap-3">
+            <span className="material-symbols-outlined text-5xl text-danger-custom">error_outline</span>
+            <h3 className="font-headline text-xl font-bold text-primary">Không thể tải danh sách đặt phòng</h3>
+            <p className="text-text-secondary text-sm max-w-sm">{bookingsError}</p>
+            <Button variant="outline" size="sm" iconLeft="refresh" onClick={() => setRefreshKey((value) => value + 1)}>
+              Thử lại
+            </Button>
+          </div>
+        ) : bookings.length === 0 ? (
           <div className="bg-surface rounded-2xl border border-border-custom shadow-sm p-14 flex flex-col items-center text-center gap-3">
             <span className="material-symbols-outlined text-5xl text-text-secondary/30">search_off</span>
-            <h3 className="font-headline text-xl font-bold text-primary">Không tìm thấy đặt phòng</h3>
+            <h3 className="font-headline text-xl font-bold text-primary">
+              {query.trim() ? 'Không tìm thấy đặt phòng' : 'Chưa có đặt phòng chờ check-in'}
+            </h3>
             <p className="text-text-secondary text-sm max-w-sm">
-              Không tìm thấy mã đặt phòng hoặc số điện thoại &ldquo;{query}&rdquo;. Kiểm tra lại thông tin.
+              {query.trim()
+                ? <>Không tìm thấy mã đặt phòng hoặc số điện thoại &ldquo;{query}&rdquo;. Kiểm tra lại thông tin.</>
+                : 'Hiện không có đặt phòng nào ở trạng thái chờ nhận phòng.'}
             </p>
-            <Button variant="outline" size="sm" iconLeft="refresh" onClick={() => setQuery('')}>Xóa tìm kiếm</Button>
+            {query.trim() ? (
+              <Button variant="outline" size="sm" iconLeft="refresh" onClick={() => setQuery('')}>Xóa tìm kiếm</Button>
+            ) : (
+              <Button variant="outline" size="sm" iconLeft="refresh" onClick={() => setRefreshKey((value) => value + 1)}>Tải lại</Button>
+            )}
           </div>
         ) : (
           <>
             <div className="flex items-center justify-between">
               <p className="text-sm text-text-secondary">
-                Hiển thị <strong className="text-primary">{filtered.length}</strong> / {bookings.length} đặt phòng hôm nay
+                Hiển thị <strong className="text-primary">{bookings.length}</strong> đặt phòng đang chờ check-in
               </p>
               <div className="flex items-center gap-3 text-xs text-text-secondary">
-                <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-accent inline-block" />Chờ check-in</span>
-                <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block" />Đã check-in</span>
+                <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-accent inline-block" />Sẵn sàng</span>
+                <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-amber-500 inline-block" />Cần dọn phòng</span>
               </div>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-2 gap-4">
-              {filtered.map((b) => (
+              {bookings.map((b) => (
                 <BookingCard
                   key={b.bookingCode}
                   booking={b}
                   onCheckIn={handleCheckIn}
                   busy={busyId === b.bookingCode}
+                  disabled={busyId !== null}
                 />
               ))}
             </div>
