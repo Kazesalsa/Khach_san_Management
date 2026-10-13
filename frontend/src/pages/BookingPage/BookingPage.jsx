@@ -508,9 +508,8 @@ export default function BookingPage() {
                   size="lg"
                   fullWidth
                   isLoading={busy}
-                  iconRight={busy ? undefined : 'qr_code_scanner'}
                 >
-                  {busy ? 'Đang chuyển hướng sang PayOS…' : `Xác nhận & Thanh toán cọc PayOS (${formatVND(deposit)})`}
+                  {busy ? 'Đang xử lý…' : 'Xác nhận đặt'}
                 </Button>
 
                 <p className="text-center text-[10px] text-text-secondary mt-3 leading-5">

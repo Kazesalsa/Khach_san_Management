@@ -444,9 +444,8 @@ const BookingConfirmModal = ({
               variant="primary"
               size="md"
               isLoading={isSubmitting}
-              iconRight="qr_code_scanner"
             >
-              {isSubmitting ? 'Đang chuyển sang PayOS…' : `Thanh toán cọc qua PayOS (${formatVND(depositAmount)})`}
+              {isSubmitting ? 'Đang xử lý…' : 'Xác nhận đặt'}
             </Button>
           </div>
 

@@ -187,6 +187,10 @@ public class PaymentService {
     public void processWebhook(Webhook webhookBody) {
         try {
             log.info("Nhận webhook từ PayOS: {}", objectMapper.writeValueAsString(webhookBody));
+            if (webhookBody == null || webhookBody.getData() == null) {
+                log.info("Webhook kiểm tra URL hoặc dữ liệu rỗng từ PayOS");
+                return;
+            }
             WebhookData data = payOS.verifyPaymentWebhookData(webhookBody);
 
             boolean isSuccess = "00".equals(data.getCode())
