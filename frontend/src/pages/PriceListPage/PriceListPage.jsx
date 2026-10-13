@@ -49,6 +49,7 @@ function PriceListPage() {
   const [editingId, setEditingId] = useState(null);
   const [form, setForm] = useState(EMPTY_FORM);
   const [formError, setFormError] = useState('');
+  const [formBusy, setFormBusy] = useState(false);
 
   const [roomCategories, setRoomCategories] = useState([
     {
@@ -195,16 +196,16 @@ function PriceListPage() {
 
   const handleSubmit = async (event) => {
     event.preventDefault();
+    if (formBusy) return;
 
     setFormError('');
 
     if (form.endDate < form.startDate) {
-      setFormError(
-        'Ngày kết thúc phải lớn hơn hoặc bằng ngày bắt đầu.'
-      );
+      setFormError('Ngày kết thúc phải lớn hơn hoặc bằng ngày bắt đầu.');
       return;
     }
 
+    setFormBusy(true);
     try {
       if (editingId) {
         await updatePriceList(editingId, {
@@ -220,26 +221,18 @@ function PriceListPage() {
           price: Number(form.price),
         });
       }
-
       handleCloseModal();
-
-      // Đồng bộ lại danh sách từ database
       await loadPriceLists();
     } catch (err) {
       if (err.response) {
-        setFormError(
-          err.response.data?.message ||
-            `Không thể lưu bảng giá (${err.response.status}).`
-        );
+        setFormError(err.response.data?.message || `Không thể lưu bảng giá (${err.response.status}).`);
       } else if (err.request) {
-        setFormError(
-          'Không thể kết nối tới máy chủ. Vui lòng kiểm tra backend đang chạy.'
-        );
+        setFormError('Không thể kết nối tới máy chủ. Vui lòng kiểm tra backend đang chạy.');
       } else {
-        setFormError(
-          'Đã xảy ra lỗi. Vui lòng thử lại.'
-        );
+        setFormError('Đã xảy ra lỗi. Vui lòng thử lại.');
       }
+    } finally {
+      setFormBusy(false);
     }
   };
 
@@ -330,9 +323,12 @@ function PriceListPage() {
                         priceListsError ? 'text-red-600' : 'text-text-secondary'
                       }`}
                     >
-                      {loadingPriceLists
-                        ? 'Đang tải danh sách bảng giá...'
-                        : priceListsError || 'Chưa có bảng giá phòng nào.'}
+                      {loadingPriceLists ? (
+                        <div className="flex items-center justify-center gap-2">
+                          <span className="material-symbols-outlined text-[20px] text-accent animate-spin">progress_activity</span>
+                          <span>Đang tải danh sách bảng giá...</span>
+                        </div>
+                      ) : priceListsError || 'Chưa có bảng giá phòng nào.'}
                     </td>
                   </tr>
                 )}
@@ -458,17 +454,18 @@ function PriceListPage() {
               type="button"
               variant="ghost"
               onClick={handleCloseModal}
+              isDisabled={formBusy}
             >
               Hủy
             </Button>
 
             <Button
               type="submit"
-              iconLeft="save"
+              iconLeft={formBusy ? undefined : 'save'}
+              isLoading={formBusy}
+              isDisabled={formBusy}
             >
-              {editingId
-                ? 'Lưu thay đổi'
-                : 'Tạo bảng giá'}
+              {formBusy ? 'Đang lưu…' : editingId ? 'Lưu thay đổi' : 'Tạo bảng giá'}
             </Button>
           </div>
         </form>
