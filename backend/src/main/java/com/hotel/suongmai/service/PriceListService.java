@@ -1,5 +1,6 @@
 package com.hotel.suongmai.service;
 
+import com.hotel.suongmai.dto.PriceListListItemResponse;
 import com.hotel.suongmai.dto.PriceListResult;
 import com.hotel.suongmai.dto.RoomCategoryOptionResponse;
 import com.hotel.suongmai.entity.PriceList;
@@ -24,6 +25,14 @@ public class PriceListService {
     private final BookingRepository bookingRepository;
     private final RoomCategoryRepository roomCategoryRepository;
 
+    @Transactional(readOnly = true)
+    public List<PriceListListItemResponse> getPriceLists() {
+        return priceListRepository.findAllWithRoomCategoryOrderByStartDateDesc()
+                .stream()
+                .map(PriceListListItemResponse::from)
+                .toList();
+    }
+
     /**
      * Tạo bảng giá phòng mới (UC-01 Main Flow + EF-1 + AF-2)
      */
@@ -45,8 +54,7 @@ public class PriceListService {
         if (priceListRepository.existsOverlappingPrice(
                 categoryId,
                 startDate,
-                endDate,
-                null
+                endDate
         )) {
             throw new PriceListOverlapException(
                     "Khoảng thời gian này đã tồn tại bảng giá cho loại phòng được chọn!"
@@ -101,7 +109,7 @@ public class PriceListService {
         String categoryId =
                 existingPriceList.getRoomCategory().getId();
 
-        if (priceListRepository.existsOverlappingPrice(
+        if (priceListRepository.existsOverlappingPriceExcludingId(
                 categoryId,
                 newStartDate,
                 newEndDate,

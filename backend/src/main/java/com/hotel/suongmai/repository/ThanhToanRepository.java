@@ -11,6 +11,9 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
+import java.util.Optional;
+
 @Repository
 public interface ThanhToanRepository extends JpaRepository<ThanhToan, String> {
 
@@ -29,4 +32,10 @@ public interface ThanhToanRepository extends JpaRepository<ThanhToan, String> {
             LoaiGiaoDich transactionType,
             TrangThaiThanhToan status
     );
+
+    Optional<ThanhToan> findByReferenceCode(String referenceCode);
+
+    List<ThanhToan> findByBooking_Id(String bookingId);
+
+    List<ThanhToan> findByBooking_BookingCode(String bookingCode);
 }

@@ -4,6 +4,7 @@ import com.hotel.suongmai.entity.Room;
 import com.hotel.suongmai.entity.CleaningStatus;
 import com.hotel.suongmai.entity.UsageStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -15,7 +16,26 @@ import java.util.Optional;
 @Repository
 public interface RoomRepository extends JpaRepository<Room, String> {
     Optional<Room> findByRoomCode(String roomCode);
+    Optional<Room> findByRoomNumber(String roomNumber);
+    List<Room> findByRoomCategory_Id(String categoryId);
     List<Room> findByUsageStatusAndCleaningStatus(UsageStatus usageStatus, CleaningStatus cleaningStatus);
+    List<Room> findAllByOrderByFloorAscRoomNumberAsc();
+
+    @Query("SELECT DISTINCT r FROM Room r " +
+            "LEFT JOIN FETCH r.roomCategory rc " +
+            "LEFT JOIN FETCH rc.amenities " +
+            "ORDER BY r.floor ASC, r.roomNumber ASC")
+    List<Room> findAllWithCategoryAndAmenities();
+
+    @Query("SELECT DISTINCT r FROM Room r " +
+            "LEFT JOIN FETCH r.roomCategory rc " +
+            "LEFT JOIN FETCH rc.amenities " +
+            "WHERE r.id = :id OR r.roomCode = :id OR r.roomNumber = :id")
+    Optional<Room> findByIdOrCodeWithCategoryAndAmenities(@Param("id") String id);
+
+    @Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT room FROM Room room JOIN FETCH room.roomCategory WHERE room.id = :roomId")
+    Optional<Room> findByIdForBooking(@Param("roomId") String roomId);
 
     @Query(value = "SELECT r.* FROM phong r " +
             "WHERE NOT EXISTS ( " +

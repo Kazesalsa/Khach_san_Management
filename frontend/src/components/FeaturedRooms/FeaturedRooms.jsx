@@ -1,66 +1,58 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-
-const rooms = [
-  {
-    id: "deluxe",
-    category: "couple",
-    name: "Deluxe Ban Công Sương Mai",
-    nameEn: "Deluxe Balcony Room",
-    image: "https://lh3.googleusercontent.com/aida-public/AB6AXuCEO5ivCIEf-os9sfCPlGBzMjkZNT89sgg58WLF7qARLAyS0AT5S_flgcwWgkC30N2CqOeXNO0YcVIVABCfPdONoCPzZmtS3U0MfmQJ_PgV-3LNi9JdaZv6lX0AUYMRoWkXeN6_zVi2_y9GtFlS2vloerqGgnDdGd-xvR4MfNMGXo0TFEz9lYrJT20O4nDjc38gkQ_pw0WunZXT34gGjySmoWWKElVaSqODxKnpoOQ",
-    status: { text: "Còn 3 phòng trống", color: "bg-success-custom", type: "available" },
-    specs: "35m² • View Ban công phố",
-    bed: "1 King hoặc 2 Twin",
-    guests: "2 Người lớn + 1 Trẻ em",
-    amenities: ["Bồn tắm nằm", "Smart TV 55\"", "Máy pha cafe", "Buffet sáng free"],
-    vipLabel: { icon: "card_membership", text: "Tặng voucher Spa 200k cho khách hội viên VIP" },
-    policy: { icon: "info", text: "Đặt cọc 30% giữ phòng ngay • Hủy linh hoạt trước 48h" },
-    priceOld: "2.100.000 đ",
-    priceNew: "1.650.000 đ",
-    discount: "-21%"
-  },
-  {
-    id: "premier",
-    category: "vip",
-    name: "Premier Indochine Suite",
-    nameEn: "Premier Garden View Suite",
-    image: "https://lh3.googleusercontent.com/aida-public/AB6AXuAAbvJIFrIXJ7BDwtSOnPlFAwTQQkpQC8PqtrpgxC3r0V7yyyhAzd9b_F1ejWXg0TID039eth_tchPdqDVEd6724AzBOFWVPsTyEmmzqwqv4IENlb1PqBVAarULYr6m6tT56fZI_lgE6_fdUVzwExyCHQwEyZB5SSj3jS2YkucPt36FB2KjhBerbRcs7borvtte8GFtuJmwRyUYPl5gwyTSDLZkLCQOg6CMW0sMqOc",
-    status: { text: "Sắp hết phòng (Chỉ còn 1 phòng)", color: "bg-danger-custom", type: "last-room" },
-    specs: "52m² • View Nhìn vườn sương",
-    bed: "1 Super King Bed",
-    guests: "2 Người lớn",
-    amenities: ["Phòng khách riêng", "Minibar miễn phí", "Trà chiều tặng kèm", "Bồn sục Jacuzzi"],
-    vipLabel: { icon: "verified", text: "VIP: Miễn phí Check-in sớm 2h & Đón sân bay" },
-    policy: { icon: "credit_card", text: "Giữ phòng tức thì với thanh toán 50% hoặc thẻ tín dụng" },
-    priceOld: "3.500.000 đ",
-    priceNew: "2.850.000 đ",
-    discount: "-18%"
-  },
-  {
-    id: "family",
-    category: "family",
-    name: "Grand Family Luxury Suite",
-    nameEn: "Grand Family 2-Bedroom Suite",
-    image: "https://lh3.googleusercontent.com/aida-public/AB6AXuACK-BH4l5SAj8en0qY40JKF9YVUtEbIsZ_mdnLPpl2W4SNh74HVQG5fCj-1t8IpKEbM0DnZy1nXZia5v4RNvgtq2rVl0bTpZlpGHYHTH0I5voMLHq9aoQ-EalzxVagmu2RETt-oMcr5rTTA34QMPu2SFVER8LwBEMWhqTeVxaLgkGwwzxEJJRduG9JjJDx8lK-b2DCNqlcC-s8gNoBP6vzZMex2hN99mmafcyx2mY",
-    status: { text: "Còn phòng", color: "bg-success-custom", type: "available" },
-    specs: "75m² • Căn hộ 2 phòng ngủ",
-    bed: "2 Giường King lớn",
-    guests: "4 Người lớn + 2 Trẻ em",
-    amenities: ["2 Phòng ngủ riêng", "Bếp phụ tiện ích", "Máy sấy Dyson", "2 Phòng tắm"],
-    vipLabel: { icon: "restaurant", text: "Ưu đãi đoàn: Giảm 10% ẩm thực tại Nhà hàng Mai Lounge" },
-    policy: { icon: "mark_email_read", text: "Đặt cọc 30% • Xác nhận mã đặt chỗ tự động qua SMS/Email" },
-    priceOld: null,
-    priceNew: "4.200.000 đ",
-    discount: null,
-    priceNote: "Giá tiêu chuẩn"
-  }
-];
+import { getPublicRooms } from '../../services/roomService';
 
 const FeaturedRooms = () => {
   const [filter, setFilter] = useState("all");
+  const [roomList, setRoomList] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  const filteredRooms = rooms.filter(room => filter === "all" || room.category === filter || (filter === 'couple' && room.category === 'vip'));
+  useEffect(() => {
+    let active = true;
+    getPublicRooms().then((dbRooms) => {
+      if (active && Array.isArray(dbRooms) && dbRooms.length > 0) {
+        // Lấy đại diện các phòng tiêu biểu từ Database kèm theo ảnh từ phong_hinh_anh
+        const mapped = dbRooms.slice(0, 6).map((r) => {
+          const cat = r.categoryId === 'cat-4' ? 'vip' :
+                      r.categoryId === 'cat-3' ? 'couple' :
+                      r.categoryId === 'cat-2' ? 'family' : 'couple';
+          const formatVND = (num) => new Intl.NumberFormat('vi-VN').format(num) + ' đ';
+
+          return {
+            id: r.id,
+            category: cat,
+            name: r.name,
+            nameEn: `${r.categoryName} Room ${r.roomNumber}`,
+            // Lấy ảnh trực tiếp từ bảng phong_hinh_anh
+            image: r.primaryImageUrl || (r.images && r.images[0]?.url) || 'https://images.unsplash.com/photo-1566665797739-1674de7a421a?auto=format&fit=crop&w=800&q=80',
+            status: {
+              text: r.usageStatus === 'TRONG' ? 'Còn phòng trống' : 'Đang có khách',
+              color: r.usageStatus === 'TRONG' ? 'bg-success-custom' : 'bg-danger-custom',
+              type: r.usageStatus === 'TRONG' ? 'available' : 'last-room'
+            },
+            specs: `${r.maxCapacity * 15}m² • Tầng ${r.floor} view thoáng`,
+            bed: r.maxCapacity >= 3 ? 'Giường King lớn' : '1 King hoặc 2 Twin',
+            guests: `${r.maxCapacity} Người lớn`,
+            amenities: r.amenities?.slice(0, 4) || ['Bồn tắm nằm', 'Smart TV 55"', 'Wifi miễn phí', 'Buffet sáng'],
+            vipLabel: { icon: "verified", text: `Phòng ${r.roomNumber} - Hạng ${r.categoryName}` },
+            policy: { icon: "credit_card", text: "Đặt cọc 30% giữ phòng ngay qua PayOS" },
+            priceOld: r.originalPrice ? formatVND(r.originalPrice) : null,
+            priceNew: formatVND(r.price || 1200000),
+            discount: `-${r.discountPercent || 20}%`
+          };
+        });
+        setRoomList(mapped);
+      }
+    }).catch((err) => {
+      console.warn('Lỗi lấy danh sách phòng nổi bật:', err);
+    }).finally(() => {
+      if (active) setLoading(false);
+    });
+    return () => { active = false; };
+  }, []);
+
+  const filteredRooms = roomList.filter(room => filter === "all" || room.category === filter || (filter === 'couple' && room.category === 'vip'));
 
   return (
     <section className="max-w-[1360px] mx-auto px-4 lg:px-8 py-10 w-full" id="danh-sach-phong">
@@ -102,9 +94,21 @@ const FeaturedRooms = () => {
         </motion.div>
       </div>
 
-      <motion.div layout className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <AnimatePresence>
-          {filteredRooms.map((room) => (
+      {loading && roomList.length === 0 ? (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {[1, 2, 3].map((n) => (
+            <div key={n} className="bg-surface rounded-xl overflow-hidden border border-border-custom p-4 animate-pulse">
+              <div className="w-full h-64 bg-surface-alt rounded-lg mb-4" />
+              <div className="h-6 bg-surface-alt rounded w-3/4 mb-2" />
+              <div className="h-4 bg-surface-alt rounded w-1/2 mb-4" />
+              <div className="h-10 bg-surface-alt rounded" />
+            </div>
+          ))}
+        </div>
+      ) : (
+        <motion.div layout className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <AnimatePresence>
+            {filteredRooms.map((room) => (
             <motion.div
               layout
               initial={{ opacity: 0, scale: 0.9 }}
@@ -192,6 +196,7 @@ const FeaturedRooms = () => {
           ))}
         </AnimatePresence>
       </motion.div>
+      )}
 
       <motion.div
         initial={{ opacity: 0, y: 10 }}
@@ -206,28 +211,6 @@ const FeaturedRooms = () => {
         </Link>
       </motion.div>
 
-      {/* Banner cảnh báo chống Double-Booking */}
-      <motion.div 
-        initial={{ opacity: 0, y: 20 }}
-        whileInView={{ opacity: 1, y: 0 }}
-        viewport={{ once: true }}
-        transition={{ delay: 0.2 }}
-        className="mt-8 bg-surface-alt border border-border-custom p-5 rounded-xl flex flex-col md:flex-row items-center gap-4 shadow-sm"
-      >
-        <div className="w-12 h-12 rounded-full bg-primary/10 border border-border-custom flex items-center justify-center shrink-0 text-primary">
-          <span className="material-symbols-outlined text-[26px] text-primary">lock_clock</span>
-        </div>
-        <div className="flex flex-col flex-1">
-          <h4 className="text-sm font-bold text-text-primary">Cơ chế Khóa phòng tự động ngăn trùng lịch (Anti-Double Booking)</h4>
-          <p className="text-xs text-text-secondary mt-0.5">
-            Hệ thống sẽ khóa phòng tạm thời <strong>10 phút</strong> ngay khi quý khách chuyển sang bước nhập thông tin để đảm bảo phòng giữ đúng chỗ của bạn, tránh xung đột lịch với các khách lưu trú khác trong cùng thời điểm.
-          </p>
-        </div>
-        <div className="shrink-0 flex items-center gap-1.5 text-accent font-semibold text-xs bg-surface border border-border-custom px-3 py-1.5 rounded-lg">
-          <span className="material-symbols-outlined text-[18px]">verified</span>
-          <span>Công nghệ SRS V1.4</span>
-        </div>
-      </motion.div>
     </section>
   );
 };

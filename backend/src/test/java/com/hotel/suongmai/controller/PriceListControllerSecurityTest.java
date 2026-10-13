@@ -1,6 +1,7 @@
 package com.hotel.suongmai.controller;
 
 import com.hotel.suongmai.config.SecurityConfig;
+import com.hotel.suongmai.dto.PriceListListItemResponse;
 import com.hotel.suongmai.dto.PriceListResult;
 import com.hotel.suongmai.entity.PriceList;
 import com.hotel.suongmai.entity.RoomCategory;
@@ -24,13 +25,16 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -65,6 +69,54 @@ class PriceListControllerSecurityTest {
 
     @MockBean
     private TaiKhoanDetailsService taiKhoanDetailsService;
+
+    @Test
+    void rejectsPriceListQueryWithoutTokenWithUnauthorized() throws Exception {
+        mockMvc.perform(get("/api/price-lists"))
+                .andExpect(status().isUnauthorized());
+
+        verifyNoInteractions(priceListService);
+    }
+
+    @Test
+    void rejectsPriceListQueryForUserWithoutOwnerRole() throws Exception {
+        authenticate("reception-token", "reception", VaiTro.LE_TAN);
+
+        mockMvc.perform(get("/api/price-lists")
+                        .header("Authorization", "Bearer reception-token"))
+                .andExpect(status().isForbidden());
+
+        verifyNoInteractions(priceListService);
+    }
+
+    @Test
+    void ownerCanGetPriceLists() throws Exception {
+        authenticateOwner();
+        when(priceListService.getPriceLists()).thenReturn(List.of(
+                new PriceListListItemResponse(
+                        "price-1",
+                        "cat-1",
+                        "Standard",
+                        LocalDate.of(2026, 11, 1),
+                        LocalDate.of(2026, 11, 30),
+                        new BigDecimal("500000"),
+                        "ACTIVE"
+                )
+        ));
+
+        mockMvc.perform(get("/api/price-lists")
+                        .header("Authorization", "Bearer owner-token"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].id").value("price-1"))
+                .andExpect(jsonPath("$[0].roomCategoryId").value("cat-1"))
+                .andExpect(jsonPath("$[0].roomCategoryName").value("Standard"))
+                .andExpect(jsonPath("$[0].startDate").value("2026-11-01"))
+                .andExpect(jsonPath("$[0].endDate").value("2026-11-30"))
+                .andExpect(jsonPath("$[0].price").value(500000))
+                .andExpect(jsonPath("$[0].status").value("ACTIVE"));
+
+        verify(priceListService).getPriceLists();
+    }
 
     @Test
     void rejectsRequestWithoutTokenWithUnauthorized() throws Exception {

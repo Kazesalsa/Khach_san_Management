@@ -34,12 +34,15 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class AuthService {
 
+    private static final String DEFAULT_CUSTOMER_NAME = "Khách hàng";
+
     private final AuthenticationManager authenticationManager;
     private final JwtTokenProvider jwtTokenProvider;
     private final KhachHangRepository khachHangRepository;
     private final NhanVienRepository nhanVienRepository;
     private final TaiKhoanRepository taiKhoanRepository;
     private final PasswordEncoder passwordEncoder;
+    private final EmailService emailService;
 
     public LoginResponse login(LoginRequest request) {
         Authentication authentication = authenticationManager.authenticate(
@@ -75,6 +78,15 @@ public class AuthService {
         account.setTrangThai(TrangThaiTaiKhoan.HOAT_DONG);
 
         TaiKhoan savedAccount = taiKhoanRepository.save(account);
+
+        KhachHang customer = new KhachHang();
+        customer.setTaiKhoan(savedAccount);
+        customer.setHoTen(DEFAULT_CUSTOMER_NAME);
+        customer.setEmail(email);
+        khachHangRepository.save(customer);
+
+        emailService.sendWelcomeRegistrationEmail(email, DEFAULT_CUSTOMER_NAME);
+
         return new RegisterResponse(
                 savedAccount.getId(),
                 savedAccount.getTenDangNhap(),
@@ -91,15 +103,16 @@ public class AuthService {
     }
 
     private ProfileResponse customerProfile(TaiKhoan account) {
-        KhachHang customer = khachHangRepository.findByTaiKhoanId(account.getId())
-                .orElseThrow(() -> new ProfileNotFoundException(
-                        "Không tìm thấy hồ sơ khách hàng của tài khoản"));
-
-        return new ProfileResponse(
-                account.getId(), account.getTenDangNhap(), account.getVaiTro(),
-                "CUSTOMER", customer.getId(), customer.getHoTen(), customer.getEmail(),
-                customer.getSoDienThoai(), customer.getCccdHoChieu(),
-                customer.getSoThichPhong(), customer.getNgayTao());
+        return khachHangRepository.findByTaiKhoanId(account.getId())
+                .map(customer -> new ProfileResponse(
+                        account.getId(), account.getTenDangNhap(), account.getVaiTro(),
+                        "CUSTOMER", customer.getId(), customer.getHoTen(), customer.getEmail(),
+                        customer.getSoDienThoai(), customer.getCccdHoChieu(),
+                        customer.getSoThichPhong(), customer.getNgayTao()))
+                .orElseGet(() -> new ProfileResponse(
+                        account.getId(), account.getTenDangNhap(), account.getVaiTro(),
+                        "CUSTOMER", null, DEFAULT_CUSTOMER_NAME, account.getTenDangNhap(),
+                        null, null, null, null));
     }
 
     private ProfileResponse employeeProfile(TaiKhoan account) {

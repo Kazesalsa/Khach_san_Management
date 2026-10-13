@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ROOMS_DATA } from '../../data/roomsData';
+import { getPublicRooms } from '../../services/roomService';
 import Breadcrumb from '../../components/ui/Breadcrumb';
 import RoomHeroBanner from '../../components/Rooms/RoomHeroBanner';
 import RoomFilterBar from '../../components/Rooms/RoomFilterBar';
@@ -74,9 +74,87 @@ const RoomsPage = () => {
     setCurrentPage(1);
   };
 
+  const [roomsList, setRoomsList] = useState([]);
+
+  // Tải danh sách phòng và hình ảnh thực tế từ database
+  useEffect(() => {
+    let mounted = true;
+    setIsLoading(true);
+    getPublicRooms().then((dbRooms) => {
+      if (mounted && Array.isArray(dbRooms) && dbRooms.length > 0) {
+        const mapped = dbRooms.map((r) => {
+          const categorySlug = r.categoryId === 'cat-4' ? 'president' :
+                               r.categoryId === 'cat-3' ? 'deluxe' :
+                               r.categoryId === 'cat-2' ? 'indochine-suite' : 'deluxe';
+          return {
+            id: r.id,
+            slug: r.roomCode?.toLowerCase() || r.id,
+            roomCode: r.roomCode,
+            roomNumber: r.roomNumber,
+            name: r.name,
+            nameEn: `${r.categoryName} Room ${r.roomNumber}`,
+            category: categorySlug,
+            view: 'pho-co',
+            viewLabel: `Tầng ${r.floor} - View thoáng`,
+            tub: 'french',
+            tubLabel: 'Bồn tắm cao cấp',
+            floor: `Tầng ${r.floor}`,
+            rating: 4.9,
+            reviewsCount: 120 + (parseInt(r.roomNumber, 10) || 5),
+            status: {
+              type: r.usageStatus === 'TRONG' ? 'available' : 'popular',
+              text: r.usageStatus === 'TRONG' ? 'Còn phòng trống' : 'Đang sử dụng',
+              badgeColor: 'bg-emerald-800 text-white',
+              availableCount: r.usageStatus === 'TRONG' ? 1 : 0,
+            },
+            // DANH SÁCH ẢNH LẤY TRỰC TIẾP TỪ BẢNG phong_hinh_anh TRONG DATABASE
+            images: r.images && r.images.length > 0 ? r.images.map((img) => ({
+              url: img.url,
+              caption: img.caption || `Ảnh phòng ${r.roomNumber} - ${r.categoryName}`
+            })) : [
+              { url: r.primaryImageUrl, caption: `Ảnh phòng ${r.roomNumber}` }
+            ],
+            specs: {
+              area: r.categoryId === 'cat-4' ? 65 : r.categoryId === 'cat-3' ? 45 : 32,
+              bed: r.maxCapacity >= 4 ? '2 King Lớn' : '1 King (1.8m x 2m)',
+              guests: r.maxCapacity || 2,
+              guestsLabel: `${r.maxCapacity || 2} Người lớn`,
+              maxGuests: (r.maxCapacity || 2) + 1,
+              tub: 'Bồn Sứ Pháp Chân Rồng',
+              bathroomCount: 1,
+              smoking: 'Không hút thuốc',
+            },
+            shortDescription: r.categoryDescription || `Phòng ${r.categoryName} tầng ${r.floor} tiện nghi tại Sương Mai Hotel.`,
+            fullDescription: r.categoryDescription || `Phòng ${r.categoryName} tầng ${r.floor} khách sạn Sương Mai.`,
+            amenities: r.amenities && r.amenities.length > 0 ? r.amenities : [
+              'Ban công vòm sắt ngắm phố cổ',
+              'Miễn phí trà sen Tây Hồ & Cà phê Nespresso',
+              'Bồn tắm sứ chân rồng kiểu Pháp',
+              'Wifi 6 phủ sóng tốc độ cao',
+            ],
+            pricing: {
+              originalPrice: Number(r.originalPrice) || 1500000,
+              price: Number(r.price) || 1200000,
+              discountPercent: r.discountPercent || 20,
+              priceUnit: '/ đêm',
+              includedNote: 'Đã bao gồm bữa sáng Buffet & Thuế phí VAT',
+              depositPercent: 30,
+            }
+          };
+        });
+        setRoomsList(mapped);
+      }
+    }).catch((err) => {
+      console.warn('Lỗi tải danh sách phòng từ database:', err);
+    }).finally(() => {
+      if (mounted) setIsLoading(false);
+    });
+    return () => { mounted = false; };
+  }, []);
+
   // Filter & Sort Logic
   const filteredAndSortedRooms = useMemo(() => {
-    return ROOMS_DATA.filter((room) => {
+    return roomsList.filter((room) => {
       // Category filter
       if (selectedCategory !== 'all' && room.category !== selectedCategory) {
         return false;

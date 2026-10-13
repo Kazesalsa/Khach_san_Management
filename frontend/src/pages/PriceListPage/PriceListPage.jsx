@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Link, Navigate } from 'react-router-dom';
 
 import Button from '../../components/ui/Button';
@@ -8,33 +8,10 @@ import Modal from '../../components/ui/Modal';
 
 import {
   getRoomCategories,
+  getPriceLists,
   createPriceList,
   updatePriceList,
 } from '../../services/priceListService';
-
-const INITIAL_PRICE_LISTS = [
-  {
-    id: 1,
-    roomCategoryId: 'standard',
-    startDate: '2026-10-01',
-    endDate: '2026-10-31',
-    price: 1200000,
-  },
-  {
-    id: 2,
-    roomCategoryId: 'deluxe',
-    startDate: '2026-10-01',
-    endDate: '2026-10-31',
-    price: 1800000,
-  },
-  {
-    id: 3,
-    roomCategoryId: 'suite',
-    startDate: '2026-11-01',
-    endDate: '2026-11-30',
-    price: 2800000,
-  },
-];
 
 const EMPTY_FORM = {
   roomCategoryId: '',
@@ -65,7 +42,9 @@ const getStoredUser = () => {
 function PriceListPage() {
   const user = getStoredUser();
 
-  const [priceLists, setPriceLists] = useState(INITIAL_PRICE_LISTS);
+  const [priceLists, setPriceLists] = useState([]);
+  const [loadingPriceLists, setLoadingPriceLists] = useState(true);
+  const [priceListsError, setPriceListsError] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [form, setForm] = useState(EMPTY_FORM);
@@ -77,6 +56,29 @@ function PriceListPage() {
       label: '-- Chọn loại phòng --',
     },
   ]);
+
+  const loadPriceLists = useCallback(async () => {
+    setLoadingPriceLists(true);
+    setPriceListsError('');
+
+    try {
+      const data = await getPriceLists();
+
+      if (!Array.isArray(data)) {
+        throw new Error('Dữ liệu bảng giá không hợp lệ.');
+      }
+
+      setPriceLists(data);
+    } catch (err) {
+      console.error('Không thể tải danh sách bảng giá:', err);
+      setPriceLists([]);
+      setPriceListsError(
+        'Không thể tải danh sách bảng giá. Vui lòng thử lại sau.'
+      );
+    } finally {
+      setLoadingPriceLists(false);
+    }
+  }, []);
 
   useEffect(() => {
     document.title = 'Quản lý bảng giá phòng | Sương Mai Hotel';
@@ -112,7 +114,8 @@ function PriceListPage() {
     };
 
     loadRoomCategories();
-  }, [user?.role]);
+    loadPriceLists();
+  }, [user?.role, loadPriceLists]);
 
   /*
    * FRONTEND ROUTE GUARD
@@ -203,40 +206,25 @@ function PriceListPage() {
     }
 
     try {
-      let savedPriceList;
-
       if (editingId) {
-        savedPriceList = await updatePriceList(
-          editingId,
-          {
-            startDate: form.startDate,
-            endDate: form.endDate,
-            price: Number(form.price),
-          }
-        );
-
-        setPriceLists((prev) =>
-          prev.map((item) =>
-            item.id === editingId
-              ? savedPriceList
-              : item
-          )
-        );
+        await updatePriceList(editingId, {
+          startDate: form.startDate,
+          endDate: form.endDate,
+          price: Number(form.price),
+        });
       } else {
-        savedPriceList = await createPriceList({
+        await createPriceList({
           roomCategoryId: form.roomCategoryId,
           startDate: form.startDate,
           endDate: form.endDate,
           price: Number(form.price),
         });
-
-        setPriceLists((prev) => [
-          ...prev,
-          savedPriceList,
-        ]);
       }
 
       handleCloseModal();
+
+      // Đồng bộ lại danh sách từ database
+      await loadPriceLists();
     } catch (err) {
       if (err.response) {
         setFormError(
@@ -258,38 +246,31 @@ function PriceListPage() {
   return (
     <div className="min-h-screen bg-background">
       <header className="bg-primary text-text-on-dark border-b border-white/10">
-        <div className="max-w-6xl mx-auto px-6 py-6">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6">
           <div className="flex items-start justify-between gap-4">
             <div>
               <p className="text-accent text-xs font-bold uppercase tracking-[0.2em]">
                 Sương Mai Hotel
               </p>
-
-              <h1 className="font-headline text-3xl font-bold mt-1">
+              <h1 className="font-headline text-2xl sm:text-3xl font-bold mt-1">
                 Quản lý bảng giá phòng
               </h1>
-
               <p className="text-text-on-dark/70 text-sm mt-2">
-                Thiết lập giá phòng theo loại phòng và
-                khoảng thời gian.
+                Thiết lập giá phòng theo loại phòng và khoảng thời gian.
               </p>
             </div>
-
             <Link
               to="/"
-              className="inline-flex items-center gap-2 rounded-xl border border-white/20 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-white/10"
+              className="inline-flex items-center gap-2 rounded-xl border border-white/20 px-3 sm:px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-white/10 shrink-0"
             >
-              <span className="material-symbols-outlined text-[18px]">
-                arrow_back
-              </span>
-
-              Về trang chủ
+              <span className="material-symbols-outlined text-[18px]">arrow_back</span>
+              <span className="hidden sm:inline">Về trang chủ</span>
             </Link>
           </div>
         </div>
       </header>
 
-      <main className="max-w-6xl mx-auto px-6 py-8">
+      <main className="max-w-6xl mx-auto px-4 sm:px-6 py-8">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
           <div>
             <h2 className="font-headline text-2xl font-bold text-primary">
@@ -297,7 +278,11 @@ function PriceListPage() {
             </h2>
 
             <p className="text-sm text-text-secondary mt-1">
-              Có {priceLists.length} bảng giá hiện tại.
+              {loadingPriceLists
+                ? 'Đang tải danh sách bảng giá...'
+                : priceListsError
+                  ? 'Không thể xác định số lượng bảng giá.'
+                  : `Có ${priceLists.length} bảng giá hiện tại.`}
             </p>
           </div>
 
@@ -337,16 +322,29 @@ function PriceListPage() {
               </thead>
 
               <tbody className="divide-y divide-border-custom">
-                {priceLists.map((item) => (
+                {(loadingPriceLists || priceListsError || priceLists.length === 0) && (
+                  <tr>
+                    <td
+                      colSpan={5}
+                      className={`px-6 py-10 text-center text-sm ${
+                        priceListsError ? 'text-red-600' : 'text-text-secondary'
+                      }`}
+                    >
+                      {loadingPriceLists
+                        ? 'Đang tải danh sách bảng giá...'
+                        : priceListsError || 'Chưa có bảng giá phòng nào.'}
+                    </td>
+                  </tr>
+                )}
+
+                {!loadingPriceLists && !priceListsError && priceLists.map((item) => (
                   <tr
                     key={item.id}
                     className="hover:bg-background/70 transition-colors"
                   >
                     <td className="px-6 py-4">
                       <span className="font-semibold text-primary">
-                        {getCategoryName(
-                          item.roomCategoryId
-                        )}
+                        {item.roomCategoryName || getCategoryName(item.roomCategoryId)}
                       </span>
                     </td>
 

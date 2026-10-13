@@ -72,7 +72,12 @@ public class SecurityConfig {
                     // Cho phép public API đăng nhập và kiểm tra hệ thống
                     .requestMatchers(HttpMethod.POST, "/api/auth/login").permitAll()
                     .requestMatchers(HttpMethod.POST, "/api/auth/register").permitAll()
+                    .requestMatchers(HttpMethod.POST, "/api/bookings").permitAll()
                     .requestMatchers(HttpMethod.GET, "/api/rooms/available").permitAll()
+                    .requestMatchers(HttpMethod.GET, "/api/rooms/public/**").permitAll()
+                    .requestMatchers(HttpMethod.GET, "/api/rooms/public").permitAll()
+                    .requestMatchers(HttpMethod.GET, "/api/public/**").permitAll()
+                    .requestMatchers("/api/payment/**").permitAll()
                     .requestMatchers("/api/test").permitAll()
                     .requestMatchers("/error").permitAll()
                     // Tất cả các API còn lại đều phải có JWT Token hợp lệ

@@ -15,6 +15,7 @@ import AuthField from "./AuthField";
 import { validate } from "./validation";
 import {
   login,
+  register,
   getCurrentProfile,
 } from "../services/authService";
 
@@ -154,37 +155,84 @@ export default function AuthPage({ mode }) {
         return;
       }
 
-      // Register và Forgot hiện chưa có API tương ứng,
+      // Forgot hiện chưa có API tương ứng,
       // nên tạm giữ hành vi demo cũ.
       if (mode === "forgot") {
         notify(
           "Bản demo: email hợp lệ. Chưa gửi email khôi phục mật khẩu.",
         );
       } else if (mode === "register") {
-        notify(
-          "Bản demo: thông tin đăng ký hợp lệ. Chưa tạo tài khoản thật.",
-        );
+          await register(
+            values.email,
+            values.password,
+            values.confirm
+          );
+
+          navigate("/dang-nhap", { replace: true });
+          return;
       }
-    } catch (error) {
-      // Nếu login thất bại thì không giữ token/user cũ.
-      localStorage.removeItem("authToken");
-      localStorage.removeItem("authUser");
-      sessionStorage.removeItem("authToken");
-      sessionStorage.removeItem("authUser");
-
+          } catch (error) {
       const status = error.response?.status;
+      const message = error.response?.data?.message;
 
-      if (status === 401) {
-        notify("Tên đăng nhập/email hoặc mật khẩu không đúng.", "error");
-      } else if (status === 403) {
-        notify("Tài khoản đã bị khóa hoặc không có quyền đăng nhập.", "error");
-      } else if (!error.response) {
-        notify(
-          "Không thể kết nối đến máy chủ. Hãy kiểm tra backend đang chạy.",
-          "error"
-        );
-      } else {
-        notify("Đăng nhập thất bại. Vui lòng thử lại.", "error");
+      if (mode === "register") {
+        if (!error.response) {
+          notify(
+            "Không thể kết nối đến máy chủ. Vui lòng thử lại.",
+            "error"
+          );
+        } else if (status === 400) {
+          const fieldErrors = error.response.data?.errors;
+          const firstFieldError = fieldErrors
+            ? Object.values(fieldErrors)[0]
+            : null;
+
+          notify(
+            firstFieldError ||
+              message ||
+              "Thông tin đăng ký không hợp lệ.",
+            "error"
+          );
+        } else if (status === 409) {
+          notify(
+            message || "Email đã được đăng ký.",
+            "error"
+          );
+        } else {
+          notify(
+            message || "Đăng ký thất bại. Vui lòng thử lại.",
+            "error"
+          );
+        }
+
+      } else if (mode === "login") {
+        // Chỉ xóa phiên đăng nhập khi LOGIN thất bại.
+        localStorage.removeItem("authToken");
+        localStorage.removeItem("authUser");
+        sessionStorage.removeItem("authToken");
+        sessionStorage.removeItem("authUser");
+
+        if (status === 401) {
+          notify(
+            "Tên đăng nhập/email hoặc mật khẩu không đúng.",
+            "error"
+          );
+        } else if (status === 403) {
+          notify(
+            "Tài khoản đã bị khóa hoặc không có quyền đăng nhập.",
+            "error"
+          );
+        } else if (!error.response) {
+          notify(
+            "Không thể kết nối đến máy chủ. Hãy kiểm tra backend đang chạy.",
+            "error"
+          );
+        } else {
+          notify(
+            "Đăng nhập thất bại. Vui lòng thử lại.",
+            "error"
+          );
+        }
       }
     } finally {
       setBusy(false);
@@ -331,7 +379,6 @@ export default function AuthPage({ mode }) {
                   "password",
                   "Mật khẩu",
                   mode === "login" ? "current-password" : "new-password",
-                  mode === "register" ? "Sử dụng ít nhất 8 ký tự." : null,
                 )}
 
               {mode === "register" &&

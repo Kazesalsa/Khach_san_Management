@@ -1,63 +1,12 @@
 import { useState, useMemo, useCallback, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import axios from 'axios';
 import Badge from '../../components/ui/Badge';
 import Button from '../../components/ui/Button';
+import { useToast } from '../../components/ui/Toast';
 import InvoiceModal from '../../components/Invoice/InvoiceModal';
-
-// ─── Dữ liệu mẫu ─────────────────────────────────────────────────────────────
-const INITIAL_ROOMS = [
-  {
-    id: 1, roomNumber: '101', roomType: 'Standard', floor: 1,
-    bookingCode: 'SM-482031', guestName: 'Nguyễn Văn An', phone: '0912 345 678',
-    checkIn: '2026-10-08', checkOut: '2026-10-12', nights: 4,
-    totalAmount: 4800000, depositPaid: 1440000, paymentStatus: 'paid',
-    adults: 2, children: 0,
-  },
-  {
-    id: 2, roomNumber: '203', roomType: 'Deluxe Ban Công', floor: 2,
-    bookingCode: 'SM-719204', guestName: 'Trần Thị Bích', phone: '0987 654 321',
-    checkIn: '2026-10-09', checkOut: '2026-10-11', nights: 2,
-    totalAmount: 3600000, depositPaid: 0, paymentStatus: 'unpaid',
-    adults: 2, children: 1,
-  },
-  {
-    id: 3, roomNumber: '305', roomType: 'Premier Suite', floor: 3,
-    bookingCode: 'SM-330587', guestName: 'Lê Minh Khoa', phone: '0903 111 222',
-    checkIn: '2026-10-07', checkOut: '2026-10-13', nights: 6,
-    totalAmount: 16800000, depositPaid: 5040000, paymentStatus: 'paid',
-    adults: 3, children: 0,
-  },
-  {
-    id: 4, roomNumber: '102', roomType: 'Standard', floor: 1,
-    bookingCode: 'SM-204815', guestName: 'Phạm Thu Hà', phone: '0934 567 890',
-    checkIn: '2026-10-10', checkOut: '2026-10-12', nights: 2,
-    totalAmount: 2400000, depositPaid: 0, paymentStatus: 'unpaid',
-    adults: 1, children: 0,
-  },
-  {
-    id: 5, roomNumber: '401', roomType: 'Executive King', floor: 4,
-    bookingCode: 'SM-965412', guestName: 'Hoàng Đức Tài', phone: '0978 333 444',
-    checkIn: '2026-10-09', checkOut: '2026-10-14', nights: 5,
-    totalAmount: 17500000, depositPaid: 5250000, paymentStatus: 'paid',
-    adults: 2, children: 2,
-  },
-  {
-    id: 6, roomNumber: '202', roomType: 'Deluxe Ban Công', floor: 2,
-    bookingCode: 'SM-841763', guestName: 'Vũ Thanh Liêm', phone: '0901 888 999',
-    checkIn: '2026-10-10', checkOut: '2026-10-13', nights: 3,
-    totalAmount: 5400000, depositPaid: 0, paymentStatus: 'unpaid',
-    adults: 2, children: 0,
-  },
-  {
-    id: 7, roomNumber: '502', roomType: 'Family Duplex', floor: 5,
-    bookingCode: 'SM-127934', guestName: 'Ngô Thị Mai', phone: '0911 222 333',
-    checkIn: '2026-10-08', checkOut: '2026-10-12', nights: 4,
-    totalAmount: 16800000, depositPaid: 5040000, paymentStatus: 'paid',
-    adults: 4, children: 2,
-  },
-];
+import { createCheckoutPayment, redirectToPayOS } from '../../services/paymentService';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 const formatVND = (n) =>
@@ -79,12 +28,33 @@ function CheckoutModal({ room, onClose, onConfirmed }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [done, setDone] = useState(false);
+  const [payingPayOS, setPayingPayOS] = useState(false);
 
   if (!room) return null;
 
   const remaining = room.totalAmount - room.depositPaid;
   const hasUnpaid = room.paymentStatus === 'unpaid' && remaining > 0;
   const daysLeft  = getDaysLeft(room.checkOut);
+
+  const handlePayOS = async () => {
+    setPayingPayOS(true);
+    setError('');
+    try {
+      const res = await createCheckoutPayment({
+        bookingCode: room.bookingCode,
+        amount: remaining,
+      });
+      if (res?.checkoutUrl) {
+        redirectToPayOS(res.checkoutUrl);
+        return;
+      }
+      throw new Error('Không nhận được liên kết thanh toán từ PayOS');
+    } catch (err) {
+      console.error('Lỗi PayOS checkout:', err);
+      setError(err.response?.data?.message || err.message || 'Lỗi kết nối cổng thanh toán PayOS. Vui lòng thử lại.');
+      setPayingPayOS(false);
+    }
+  };
 
   const handleConfirm = async () => {
     setBusy(true);
@@ -101,20 +71,15 @@ function CheckoutModal({ room, onClose, onConfirmed }) {
         onConfirmed(room.id);
         onClose();
       }, 1800);
-    } catch (err) {
-      // Fallback: giả lập thành công khi backend chưa có endpoint
-      if (err.response?.status === 404 || err.code === 'ERR_NETWORK' || !err.response) {
-        setDone(true);
-        setTimeout(() => {
-          onConfirmed(room.id);
-          onClose();
-        }, 1800);
-      } else {
-        setError(err.response?.data?.message || `Lỗi từ máy chủ (${err.response?.status}). Vui lòng thử lại.`);
+
+      } catch (err) {
+        setError(
+          err.response?.data?.message ||
+          `Lỗi từ máy chủ (${err.response?.status || 'kết nối'}). Vui lòng thử lại.`
+        );
         setBusy(false);
       }
-    }
-  };
+    };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 overflow-y-auto">
@@ -220,14 +185,27 @@ function CheckoutModal({ room, onClose, onConfirmed }) {
                 </div>
               </div>
 
-              {/* Cảnh báo chưa thanh toán */}
+              {/* Cảnh báo chưa thanh toán & Nút thanh toán PayOS */}
               {hasUnpaid && (
-                <div className="flex items-start gap-3 p-3.5 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-800">
-                  <span className="material-symbols-outlined text-amber-500 text-[20px] shrink-0 mt-0.5">warning</span>
-                  <div>
-                    <p className="font-bold mb-0.5">Khách chưa thanh toán đủ</p>
-                    <p>Còn <strong>{formatVND(remaining)}</strong> chưa được thu. Vui lòng thu tiền trước khi xác nhận trả phòng.</p>
+                <div className="space-y-3">
+                  <div className="flex items-start gap-3 p-3.5 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-800">
+                    <span className="material-symbols-outlined text-amber-500 text-[20px] shrink-0 mt-0.5">warning</span>
+                    <div>
+                      <p className="font-bold mb-0.5">Khách chưa thanh toán đủ</p>
+                      <p>Còn <strong>{formatVND(remaining)}</strong> chưa được thu. Vui lòng thanh toán qua cổng PayOS trước khi xác nhận trả phòng.</p>
+                    </div>
                   </div>
+
+                  <Button
+                    variant="primary"
+                    size="md"
+                    fullWidth
+                    iconLeft="qr_code_scanner"
+                    isLoading={payingPayOS}
+                    onClick={handlePayOS}
+                  >
+                    {payingPayOS ? 'Đang mở cổng PayOS…' : `Thanh toán qua PayOS (${formatVND(remaining)})`}
+                  </Button>
                 </div>
               )}
 
@@ -308,7 +286,11 @@ function RoomCard({ room, onOpenCheckout, onOpenInvoice }) {
             : daysLeft <= 2 ? 'bg-amber-50 text-amber-700'
             : 'bg-surface-alt text-text-secondary'
           }`}>
-            {daysLeft <= 0 ? 'Trả phòng hôm nay' : `Còn ${daysLeft} ngày`}
+            {daysLeft < 0
+              ? `Quá hạn ${Math.abs(daysLeft)} ngày`
+              : daysLeft === 0
+                ? 'Trả phòng hôm nay'
+                : `Còn ${daysLeft} ngày`}
           </span>
         </div>
 
@@ -389,11 +371,38 @@ function RoomCard({ room, onOpenCheckout, onOpenInvoice }) {
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
 export default function CheckoutListPage() {
+  const [searchParams] = useSearchParams();
+  const { addToast } = useToast();
+
   useEffect(() => {
     document.title = 'Danh Sách Phòng Cần Trả | Sương Mai Hotel';
   }, []);
 
-  const [rooms,        setRooms]        = useState(INITIAL_ROOMS);
+  const [rooms, setRooms] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [fetchNotice, setFetchNotice] = useState('');
+
+  useEffect(() => {
+    const status = searchParams.get('status');
+    const bookingCode = searchParams.get('bookingCode');
+    if (status === 'PAID' && bookingCode) {
+      setRooms((prev) =>
+        prev.map((r) =>
+          r.bookingCode === bookingCode
+            ? { ...r, paymentStatus: 'paid', depositPaid: r.totalAmount }
+            : r
+        )
+      );
+      if (addToast) {
+        addToast({
+          title: 'Thanh toán thành công qua PayOS',
+          message: `Mã đặt phòng ${bookingCode} đã hoàn tất thanh toán.`,
+          type: 'success',
+          duration: 5000,
+        });
+      }
+    }
+  }, [searchParams, addToast]);
   const [search,       setSearch]       = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
   const [filterFloor,  setFilterFloor]  = useState('all');
@@ -401,6 +410,90 @@ export default function CheckoutListPage() {
   const [showModal,    setShowModal]    = useState(false);
   const [invoiceRoom,  setInvoiceRoom]  = useState(null);
   const [showInvoice,  setShowInvoice]  = useState(false);
+
+  // Lấy danh sách phòng đang có khách từ Backend
+  const fetchRooms = useCallback(async () => {
+    setLoading(true);
+    setFetchNotice('');
+
+    try {
+      const token =
+        localStorage.getItem('authToken') ||
+        sessionStorage.getItem('authToken');
+
+      if (!token) {
+        setRooms([]);
+        setFetchNotice(
+          'Vui lòng đăng nhập để xem danh sách phòng đang có khách.'
+        );
+        return;
+      }
+
+      const response = await axios.get('/api/checkout/rooms', {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!Array.isArray(response.data)) {
+        throw new Error('Dữ liệu danh sách phòng không hợp lệ.');
+      }
+
+      const mappedRooms = response.data.map((item) => {
+        const checkIn = item.checkInTime
+          ? item.checkInTime.split('T')[0]
+          : '';
+
+        const checkOut = item.expectedCheckOutDate || '';
+
+        const nights =
+          checkIn && checkOut
+            ? Math.max(
+                1,
+                Math.round(
+                  (new Date(checkOut) - new Date(checkIn)) /
+                    86400000
+                )
+              )
+            : 1;
+
+        return {
+          id: item.bookingDetailId,
+          roomNumber: item.roomNumber,
+          roomType: item.roomType,
+          floor: item.floor,
+          bookingCode: item.bookingCode,
+          guestName: item.guestName,
+          phone: item.phone || '—',
+          checkIn,
+          checkOut,
+          nights,
+          totalAmount: Number(item.totalAmount ?? 0),
+          depositPaid: Number(item.paidAmount ?? 0),
+          paymentStatus: item.paymentStatus,
+          adults: item.guestCount ?? 1,
+          children: 0,
+        };
+      });
+
+      setRooms(mappedRooms);
+    } catch (err) {
+      console.error('Không thể tải danh sách phòng:', err);
+      setRooms([]);
+
+      setFetchNotice(
+        err.response?.data?.message ||
+          err.message ||
+          'Không thể tải danh sách phòng đang có khách.'
+      );
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchRooms();
+  }, [fetchRooms]);
 
   const floors = useMemo(() => [...new Set(rooms.map((r) => r.floor))].sort(), [rooms]);
 
@@ -432,10 +525,10 @@ export default function CheckoutListPage() {
     setTimeout(() => setSelectedRoom(null), 300);
   }, []);
 
-  // Xóa phòng khỏi danh sách sau khi trả phòng thành công
-  const handleCheckedOut = useCallback((roomId) => {
-    setRooms((prev) => prev.filter((r) => r.id !== roomId));
-  }, []);
+  // Đồng bộ danh sách phòng với Backend sau khi Checkout thành công
+  const handleCheckedOut = useCallback(() => {
+    fetchRooms();
+  }, [fetchRooms]);
 
   return (
     <div className="min-h-screen bg-background">
@@ -462,6 +555,18 @@ export default function CheckoutListPage() {
       </header>
 
       <main className="max-w-6xl mx-auto px-4 sm:px-6 py-8 space-y-6">
+        {/* Thông báo lỗi khi lấy danh sách phòng */}
+        {fetchNotice && (
+          <div
+            role="alert"
+            className="rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-800"
+          >
+            <p className="font-semibold">
+              Không thể tải danh sách phòng đang có khách
+            </p>
+            <p className="mt-1">{fetchNotice}</p>
+          </div>
+        )}
 
         {/* Stat cards */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -598,8 +703,8 @@ export default function CheckoutListPage() {
             isOpen={showInvoice}
             onClose={() => { setShowInvoice(false); setTimeout(() => setInvoiceRoom(null), 300); }}
             room={invoiceRoom}
-            onPaymentConfirmed={(roomId) => {
-              setRooms((prev) => prev.map((r) => r.id === roomId ? { ...r, paymentStatus: 'paid', depositPaid: r.totalAmount } : r));
+            onPaymentConfirmed={() => {
+              fetchRooms();
               setShowInvoice(false);
               setTimeout(() => setInvoiceRoom(null), 300);
             }}

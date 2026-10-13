@@ -16,6 +16,7 @@ import CheckoutListPage from './pages/CheckoutListPage/CheckoutListPage';
 import RevenueDashboardPage from './pages/RevenueDashboardPage/RevenueDashboardPage';
 import CheckInPage from './pages/CheckInPage/CheckInPage';
 import BookingPage from './pages/BookingPage/BookingPage';
+import PaymentResultPage from './pages/PaymentResultPage/PaymentResultPage';
 import './auth/auth.css';
 import { useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
@@ -37,6 +38,7 @@ function PageTitleUpdater() {
       '/rooms': 'Danh sách phòng',
       '/rooms/available': 'Tra cứu phòng trống',
       '/booking': 'Đặt phòng',
+      '/payment/result': 'Kết quả thanh toán',
     };
 
     document.title = titles[pathname]
@@ -61,6 +63,8 @@ function App() {
           <Route path="/rooms/available" element={<RoomAvailabilityPage />} />
           <Route path="/admin/checkout" element={<CheckoutListPage />} />
           <Route path="/booking" element={<BookingPage />} />
+          <Route path="/payment/result" element={<PaymentResultPage />} />
+          <Route path="/payment-result" element={<PaymentResultPage />} />
           <Route path="/dang-nhap" element={<AuthPage key="login" mode="login" />} />
           <Route path="/dang-ky" element={<AuthPage key="register" mode="register" />} />
           <Route path="/quen-mat-khau" element={<AuthPage key="forgot" mode="forgot" />} />

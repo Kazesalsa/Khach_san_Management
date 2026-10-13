@@ -1,12 +1,15 @@
 package com.hotel.suongmai.service;
 
 import com.hotel.suongmai.dto.CheckInResponse;
+import com.hotel.suongmai.dto.PendingCheckInBookingResponse;
 import com.hotel.suongmai.entity.Booking;
 import com.hotel.suongmai.entity.BookingDetail;
 import com.hotel.suongmai.entity.BookingStatus;
 import com.hotel.suongmai.entity.CleaningStatus;
+import com.hotel.suongmai.entity.KhachHang;
 import com.hotel.suongmai.entity.NhanVien;
 import com.hotel.suongmai.entity.Room;
+import com.hotel.suongmai.entity.RoomCategory;
 import com.hotel.suongmai.entity.UsageStatus;
 import com.hotel.suongmai.exception.BookingNotFoundException;
 import com.hotel.suongmai.exception.InvalidBookingStateException;
@@ -25,6 +28,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.List;
 import java.util.Optional;
+import java.math.BigDecimal;
+import java.time.LocalDate;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -78,6 +83,87 @@ class CheckInServiceTest {
         receptionist.setId("staff-id");
         receptionist.setHoNv("Nguyễn");
         receptionist.setTenNv("Lan");
+    }
+
+    @Test
+    void getPendingBookingsGroupsMultipleRoomsOfTheSameBooking() {
+        KhachHang customer = new KhachHang();
+        customer.setHoTen("Nguyễn Văn An");
+        customer.setSoDienThoai("0912345678");
+        customer.setEmail("an@example.com");
+        booking.setCustomer(customer);
+        booking.setEstimatedTotal(new BigDecimal("2400000"));
+        booking.setRequiredDeposit(new BigDecimal("720000"));
+
+        RoomCategory category = new RoomCategory();
+        category.setName("Deluxe");
+        room.setFloor(1);
+        room.setRoomCategory(category);
+
+        LocalDate checkIn = LocalDate.of(2026, 10, 20);
+        LocalDate checkOut = LocalDate.of(2026, 10, 22);
+        detail.setGuestCount(2);
+        detail.setExpectedCheckInDate(checkIn);
+        detail.setExpectedCheckOutDate(checkOut);
+
+        Room secondRoom = new Room();
+        secondRoom.setId("room-2");
+        secondRoom.setRoomNumber("102");
+        secondRoom.setFloor(1);
+        secondRoom.setRoomCategory(category);
+        secondRoom.setUsageStatus(UsageStatus.DA_DAT);
+        secondRoom.setCleaningStatus(CleaningStatus.DANG_DON);
+
+        BookingDetail secondDetail = new BookingDetail();
+        secondDetail.setId("detail-2");
+        secondDetail.setBooking(booking);
+        secondDetail.setRoom(secondRoom);
+        secondDetail.setGuestCount(3);
+        secondDetail.setExpectedCheckInDate(checkIn);
+        secondDetail.setExpectedCheckOutDate(checkOut.plusDays(1));
+
+        when(bookingDetailRepository.findPendingCheckIns(BookingStatus.DA_DAT, "", ""))
+                .thenReturn(List.of(detail, secondDetail));
+
+        List<PendingCheckInBookingResponse> result = checkInService.getPendingBookings(null);
+
+        assertThat(result).singleElement().satisfies(response -> {
+            assertThat(response.bookingCode()).isEqualTo("DP001");
+            assertThat(response.guestName()).isEqualTo("Nguyễn Văn An");
+            assertThat(response.phone()).isEqualTo("0912345678");
+            assertThat(response.bookingStatus()).isEqualTo(BookingStatus.DA_DAT);
+            assertThat(response.rooms()).hasSize(2);
+            assertThat(response.rooms().get(0).roomNumber()).isEqualTo("101");
+            assertThat(response.rooms().get(0).nights()).isEqualTo(2);
+            assertThat(response.rooms().get(1).roomNumber()).isEqualTo("102");
+            assertThat(response.rooms().get(1).nights()).isEqualTo(3);
+            assertThat(response.rooms().get(1).cleaningStatus())
+                    .isEqualTo(CleaningStatus.DANG_DON);
+        });
+    }
+
+    @Test
+    void getPendingBookingsNormalizesPhoneSearch() {
+        when(bookingDetailRepository.findPendingCheckIns(
+                BookingStatus.DA_DAT, "0912-345-678", "0912345678"))
+                .thenReturn(List.of());
+
+        assertThat(checkInService.getPendingBookings(" 0912-345-678 ")).isEmpty();
+
+        verify(bookingDetailRepository).findPendingCheckIns(
+                BookingStatus.DA_DAT, "0912-345-678", "0912345678");
+    }
+
+    @Test
+    void getPendingBookingsDoesNotTreatBookingCodeAsPhone() {
+        when(bookingDetailRepository.findPendingCheckIns(
+                BookingStatus.DA_DAT, "DP001", ""))
+                .thenReturn(List.of());
+
+        assertThat(checkInService.getPendingBookings(" dp001 ")).isEmpty();
+
+        verify(bookingDetailRepository).findPendingCheckIns(
+                BookingStatus.DA_DAT, "DP001", "");
     }
 
     @Test

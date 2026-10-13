@@ -15,14 +15,14 @@ public interface RevenueRepository extends org.springframework.data.repository.R
 
     @Query(value = """
             SELECT
-                COALESCE(SUM(total_revenue), 0) AS totalRevenue,
-                COALESCE(SUM(room_revenue), 0) AS roomRevenue,
-                COALESCE(SUM(service_revenue), 0) AS serviceRevenue,
-                COUNT(DISTINCT booking_detail_id) AS bookingCount
-            FROM v_revenue_detail
-            WHERE revenue_at >= :fromDate
-              AND revenue_at < :toDate
-              AND (:roomCategoryId IS NULL OR room_category_id = :roomCategoryId)
+                COALESCE(SUM(tong_doanh_thu), 0) AS totalRevenue,
+                COALESCE(SUM(doanh_thu_phong), 0) AS roomRevenue,
+                COALESCE(SUM(doanh_thu_dich_vu), 0) AS serviceRevenue,
+                COUNT(DISTINCT ma_chi_tiet_dat_phong) AS bookingCount
+            FROM v_chi_tiet_doanh_thu
+            WHERE thoi_gian_doanh_thu >= :fromDate
+              AND thoi_gian_doanh_thu < :toDate
+              AND (:roomCategoryId IS NULL OR ma_loai_phong = :roomCategoryId)
             """, nativeQuery = true)
     RevenueKpiProjection calculateKpi(
             @Param("fromDate") LocalDateTime fromDate,
@@ -32,15 +32,15 @@ public interface RevenueRepository extends org.springframework.data.repository.R
 
     @Query(value = """
             SELECT
-                room_category_id AS roomCategoryId,
-                room_category_name AS roomCategoryName,
-                COALESCE(SUM(room_revenue), 0) AS roomRevenue
-            FROM v_revenue_detail
-            WHERE revenue_at >= :fromDate
-              AND revenue_at < :toDate
-              AND (:roomCategoryId IS NULL OR room_category_id = :roomCategoryId)
-            GROUP BY room_category_id, room_category_name
-            ORDER BY room_category_name
+                ma_loai_phong AS roomCategoryId,
+                ten_loai_phong AS roomCategoryName,
+                COALESCE(SUM(doanh_thu_phong), 0) AS roomRevenue
+            FROM v_chi_tiet_doanh_thu
+            WHERE thoi_gian_doanh_thu >= :fromDate
+              AND thoi_gian_doanh_thu < :toDate
+              AND (:roomCategoryId IS NULL OR ma_loai_phong = :roomCategoryId)
+            GROUP BY ma_loai_phong, ten_loai_phong
+            ORDER BY ten_loai_phong
             """, nativeQuery = true)
     List<RevenueByRoomCategoryProjection> calculateByRoomCategory(
             @Param("fromDate") LocalDateTime fromDate,
@@ -50,15 +50,15 @@ public interface RevenueRepository extends org.springframework.data.repository.R
 
     @Query(value = """
             SELECT
-                CAST(revenue_at AS date) AS period,
-                COALESCE(SUM(room_revenue), 0) AS roomRevenue,
-                COALESCE(SUM(service_revenue), 0) AS serviceRevenue,
-                COALESCE(SUM(total_revenue), 0) AS totalRevenue
-            FROM v_revenue_detail
-            WHERE revenue_at >= :fromDate
-              AND revenue_at < :toDate
-              AND (:roomCategoryId IS NULL OR room_category_id = :roomCategoryId)
-            GROUP BY CAST(revenue_at AS date)
+                CAST(thoi_gian_doanh_thu AS date) AS period,
+                COALESCE(SUM(doanh_thu_phong), 0) AS roomRevenue,
+                COALESCE(SUM(doanh_thu_dich_vu), 0) AS serviceRevenue,
+                COALESCE(SUM(tong_doanh_thu), 0) AS totalRevenue
+            FROM v_chi_tiet_doanh_thu
+            WHERE thoi_gian_doanh_thu >= :fromDate
+              AND thoi_gian_doanh_thu < :toDate
+              AND (:roomCategoryId IS NULL OR ma_loai_phong = :roomCategoryId)
+            GROUP BY CAST(thoi_gian_doanh_thu AS date)
             ORDER BY period
             """, nativeQuery = true)
     List<RevenueByPeriodProjection> calculateByDay(
@@ -69,15 +69,15 @@ public interface RevenueRepository extends org.springframework.data.repository.R
 
     @Query(value = """
             SELECT
-                CAST(DATE_TRUNC('month', revenue_at) AS date) AS period,
-                COALESCE(SUM(room_revenue), 0) AS roomRevenue,
-                COALESCE(SUM(service_revenue), 0) AS serviceRevenue,
-                COALESCE(SUM(total_revenue), 0) AS totalRevenue
-            FROM v_revenue_detail
-            WHERE revenue_at >= :fromDate
-              AND revenue_at < :toDate
-              AND (:roomCategoryId IS NULL OR room_category_id = :roomCategoryId)
-            GROUP BY CAST(DATE_TRUNC('month', revenue_at) AS date)
+                CAST(DATE_TRUNC('month', thoi_gian_doanh_thu) AS date) AS period,
+                COALESCE(SUM(doanh_thu_phong), 0) AS roomRevenue,
+                COALESCE(SUM(doanh_thu_dich_vu), 0) AS serviceRevenue,
+                COALESCE(SUM(tong_doanh_thu), 0) AS totalRevenue
+            FROM v_chi_tiet_doanh_thu
+            WHERE thoi_gian_doanh_thu >= :fromDate
+              AND thoi_gian_doanh_thu < :toDate
+              AND (:roomCategoryId IS NULL OR ma_loai_phong = :roomCategoryId)
+            GROUP BY CAST(DATE_TRUNC('month', thoi_gian_doanh_thu) AS date)
             ORDER BY period
             """, nativeQuery = true)
     List<RevenueByPeriodProjection> calculateByMonth(

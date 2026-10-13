@@ -14,7 +14,7 @@ public record RoomStatusResponse(
                 room.getRoomCode(),
                 room.getRoomNumber(),
                 room.getCleaningStatus(),
-                "Cập nhật trạng thái phòng thành công"
+                "Đã đánh dấu thành công cho phòng " + room.getRoomCode()
         );
     }
 }

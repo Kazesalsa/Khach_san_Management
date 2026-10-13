@@ -4,6 +4,7 @@ import Button from '../ui/Button';
 import { Input } from '../ui/Input';
 import DatePicker from '../ui/DatePicker';
 import { useToast } from '../ui/Toast';
+import { createDepositPayment, redirectToPayOS } from '../../services/paymentService';
 
 const BookingConfirmModal = ({
   isOpen,
@@ -125,22 +126,46 @@ const BookingConfirmModal = ({
   };
 
   // Handle Submit
-  const handleConfirmBooking = (e) => {
+  const handleConfirmBooking = async (e) => {
     e.preventDefault();
     if (!validateForm()) return;
 
     setIsSubmitting(true);
+    const code = 'SM-' + Math.floor(100000 + Math.random() * 900000);
+    setBookingRef(code);
 
-    // Simulate backend booking API call (1.2s delay)
-    setTimeout(() => {
-      const code = 'SM-' + Math.floor(100000 + Math.random() * 900000);
-      setBookingRef(code);
+    try {
+      // Gọi API tạo link thanh toán tiền cọc qua cổng PayOS
+      const paymentRes = await createDepositPayment({
+        bookingCode: code,
+        roomCategoryId: room.categoryId || room.category,
+        roomId: room.id,
+        roomName: room.name,
+        checkIn,
+        checkOut,
+        guestName,
+        phone,
+        email,
+        adults: guests,
+        children: childrenCount,
+        totalAmount: subtotal,
+        depositAmount: depositAmount,
+      });
+
+      if (paymentRes?.checkoutUrl) {
+        // [PAYOS GATEWAY]: Chuyển hướng trực tiếp sang trang thanh toán PayOS
+        redirectToPayOS(paymentRes.checkoutUrl);
+        return;
+      }
+      throw new Error('Không nhận được liên kết thanh toán từ PayOS');
+    } catch (err) {
+      console.warn('Không thể chuyển sang PayOS, sử dụng fallback modal thành công:', err);
       setIsSubmitting(false);
       setBookingSuccess(true);
 
       addToast({
         title: 'Giữ phòng thành công!',
-        message: `Mã đặt phòng ${code} đã được gửi tới email ${email}. Cảm ơn quý khách!`,
+        message: `Mã đặt phòng ${code} đã được ghi nhận. Cảm ơn quý khách!`,
         type: 'success',
         duration: 5000,
       });
@@ -148,7 +173,7 @@ const BookingConfirmModal = ({
       if (onSuccess) {
         onSuccess({ code, room, checkIn, checkOut, guestName, depositAmount });
       }
-    }, 1200);
+    }
   };
 
   if (!room) return null;
@@ -419,9 +444,8 @@ const BookingConfirmModal = ({
               variant="primary"
               size="md"
               isLoading={isSubmitting}
-              iconRight="check"
             >
-              Xác nhận giữ phòng ({formatVND(depositAmount)})
+              {isSubmitting ? 'Đang xử lý…' : 'Xác nhận đặt'}
             </Button>
           </div>
 

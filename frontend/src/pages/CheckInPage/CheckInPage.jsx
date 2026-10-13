@@ -1,6 +1,6 @@
+import { confirmCheckIn } from '../../services/checkInService';
 import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
-import axios from 'axios';
 import Badge from '../../components/ui/Badge';
 import Button from '../../components/ui/Button';
 
@@ -155,8 +155,28 @@ function BookingCard({ booking, onCheckIn, busy }) {
 
         {/* Trạng thái phòng */}
         <div className="flex items-center justify-between">
-          <Badge variant={rs.variant} dot>{rs.label}</Badge>
-          {done && <Badge variant="success" icon="check_circle">Check-in lúc {new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}</Badge>}
+          {done ? (
+            <Badge variant="success" dot>
+              Đang ở
+            </Badge>
+          ) : (
+            <Badge variant={rs.variant} dot>
+              {rs.label}
+            </Badge>
+          )}
+
+          {done && (
+            <Badge variant="success" icon="check_circle">
+              {booking.actualCheckInTime
+                ? `Check-in lúc ${new Date(
+                    booking.actualCheckInTime
+                  ).toLocaleTimeString('vi-VN', {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                  })}`
+                : 'Đã check-in'}
+            </Badge>
+          )}
         </div>
 
         {/* Nút xác nhận */}
@@ -183,7 +203,9 @@ export default function CheckInPage() {
     document.title = 'Tiếp Nhận Check-in | Sương Mai Hotel';
   }, []);
 
-  const [bookings,    setBookings]    = useState(MOCK_BOOKINGS);
+  const [bookings, setBookings] = useState(
+    import.meta.env.DEV ? MOCK_BOOKINGS : []
+  );
   const [query,       setQuery]       = useState('');
   const [busyId,      setBusyId]      = useState(null);
   const [toast,       setToast]       = useState(null);
@@ -209,32 +231,47 @@ export default function CheckInPage() {
 
   const handleCheckIn = async (booking) => {
     setBusyId(booking.bookingCode);
+
     try {
-      const token = localStorage.getItem('authToken') || sessionStorage.getItem('authToken');
-      await axios.post(
-        `/api/bookings/${booking.bookingCode}/checkin`,
-        {},
-        { headers: token ? { Authorization: `Bearer ${token}` } : {} }
+      const result = await confirmCheckIn(booking.bookingCode);
+
+      setBookings((prev) =>
+        prev.map((b) =>
+          b.bookingCode === booking.bookingCode
+            ? {
+                ...b,
+                checkinStatus: 'checked_in',
+                usageStatus: result.roomStatus,
+                actualCheckInTime: result.checkInTime,
+              }
+            : b
+        )
+      );
+
+      showToast(
+        result.message ||
+          `Check-in thành công! Phòng ${booking.roomNumber}`
       );
     } catch (err) {
-      // Fallback: giả lập thành công khi backend chưa có endpoint
-      if (err.response && err.response.status !== 404 && err.code !== 'ERR_NETWORK') {
-        setBusyId(null);
-        showToast(`Lỗi: ${err.response?.data?.message || 'Không thể check-in. Thử lại sau.'}`, 'error');
-        return;
-      }
-    }
+      const status = err.response?.status;
 
-    // Cập nhật trạng thái tức thì
-    setBookings((prev) =>
-      prev.map((b) =>
-        b.bookingCode === booking.bookingCode
-          ? { ...b, checkinStatus: 'checked_in' }
-          : b
-      )
-    );
-    setBusyId(null);
-    showToast(`Check-in thành công! Phòng ${booking.roomNumber} · ${booking.guestName}`);
+      const messages = {
+        401: 'Phiên đăng nhập không hợp lệ hoặc đã hết hạn.',
+        403: 'Bạn không có quyền thực hiện check-in.',
+        404: 'Không tìm thấy đặt phòng hoặc hồ sơ lễ tân.',
+        409: 'Không thể check-in vì phòng chưa sẵn sàng hoặc trạng thái đặt phòng không hợp lệ.',
+      };
+
+      showToast(
+        err.response?.data?.message ||
+          messages[status] ||
+          err.message ||
+          'Không thể check-in. Vui lòng thử lại.',
+        'error'
+      );
+    } finally {
+      setBusyId(null);
+    }
   };
 
   return (
