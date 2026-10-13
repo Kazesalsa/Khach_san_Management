@@ -5,6 +5,9 @@ import Button from '../../components/ui/Button';
 
 function HousekeepingDashboardPage() {
   const [roomCodeInput, setRoomCodeInput] = useState('');
+  const [rooms, setRooms] = useState([]);
+  const [loadingRooms, setLoadingRooms] = useState(true);
+  const [roomsError, setRoomsError] = useState('');
   const [updating, setUpdating] = useState(false);
   const [apiFeedback, setApiFeedback] = useState({
     type: '',
@@ -13,11 +16,48 @@ function HousekeepingDashboardPage() {
 
   useEffect(() => {
     document.title = 'Dashboard Buồng Phòng | Sương Mai Hotel';
+
+    const loadRooms = async () => {
+      const token =
+        localStorage.getItem('authToken') ||
+        sessionStorage.getItem('authToken');
+
+      if (!token) {
+        setRoomsError('Vui lòng đăng nhập để xem danh sách phòng.');
+        setLoadingRooms(false);
+        return;
+      }
+
+      try {
+        const response = await axios.get('/api/rooms', {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        if (!Array.isArray(response.data)) {
+          throw new Error('Dữ liệu danh sách phòng không hợp lệ');
+        }
+
+        setRooms(response.data);
+        setRoomsError('');
+      } catch (err) {
+        console.error('Không thể tải danh sách phòng:', err);
+
+        setRoomsError(
+          'Không thể tải danh sách phòng. Vui lòng thử lại sau.'
+        );
+      } finally {
+        setLoadingRooms(false);
+      }
+    };
+
+    loadRooms();
   }, []);
 
   // Đánh dấu phòng đã dọn xong bằng API thật
-  const markRoomCleanByCode = async () => {
-    const code = roomCodeInput.trim();
+  const markRoomCleanByCode = async (selectedCode) => {
+  const code = (selectedCode ?? roomCodeInput).trim();
 
     if (!code) {
       setApiFeedback({
@@ -59,6 +99,33 @@ function HousekeepingDashboardPage() {
       });
 
       setRoomCodeInput('');
+      setRooms((prev) =>
+        prev.map((room) =>
+          room.roomCode === code
+            ? { ...room, cleaningStatus: 'DA_DON_XONG' }
+            : room
+        )
+      );
+
+      // Tải lại danh sách phòng sau khi PATCH thành công
+      try {
+        const roomsResponse = await axios.get('/api/rooms', {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        if (!Array.isArray(roomsResponse.data)) {
+          throw new Error('Dữ liệu danh sách phòng không hợp lệ');
+        }
+
+        setRooms(roomsResponse.data);
+        setRoomsError('');
+      } catch (refreshError) {
+        console.error('Không thể tải lại danh sách phòng:', refreshError);
+        // Giữ trạng thái đã cập nhật ở trên nếu GET tạm thời lỗi.
+      }
+
     } catch (err) {
       const status = err.response?.status;
 
@@ -82,17 +149,9 @@ function HousekeepingDashboardPage() {
     }
   };
 
-  const handleMarkClean = (id) => {
-    setRooms((prev) =>
-      prev.map((r) => (r.id === id ? { ...r, status: 'clean' } : r))
-    );
-  };
-
-  const handleMarkDirty = (id) => {
-    setRooms((prev) =>
-      prev.map((r) => (r.id === id ? { ...r, status: 'dirty' } : r))
-    );
-  };
+  const uncleanedRooms = rooms.filter(
+    (room) => room.cleaningStatus === 'CHUA_DON'
+  );
 
   return (
     <div className="min-h-screen bg-background">
@@ -169,6 +228,69 @@ function HousekeepingDashboardPage() {
             </div>
           )}
         </section>
+
+        {/* Danh sách phòng cần dọn từ API */}
+        <section className="bg-surface rounded-2xl border border-border-custom shadow-sm p-6">
+          <h2 className="font-headline text-xl font-bold text-primary mb-4">
+            Danh sách phòng cần dọn
+          </h2>
+
+          {loadingRooms ? (
+            <p className="text-text-secondary">
+              Đang tải danh sách phòng...
+            </p>
+          ) : roomsError ? (
+            <p role="alert" className="text-red-600">
+              {roomsError}
+            </p>
+          ) : uncleanedRooms.length === 0 ? (
+            <p className="text-text-secondary">
+              Hiện không có phòng nào cần dọn.
+            </p>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {uncleanedRooms.map((room) => (
+                <div
+                  key={room.id}
+                  className="rounded-xl border border-border-custom p-4 space-y-2"
+                >
+                  <h3 className="font-bold text-primary text-lg">
+                    Phòng {room.roomNumber}
+                  </h3>
+
+                  <p className="text-sm text-text-secondary">
+                    Mã phòng: {room.roomCode}
+                  </p>
+
+                  <p className="text-sm text-text-secondary">
+                    Loại phòng: {room.roomType || 'Chưa xác định'}
+                  </p>
+
+                  <p className="text-sm text-text-secondary">
+                    Tầng: {room.floor}
+                  </p>
+
+                  <span className="inline-block rounded-lg bg-amber-100 text-amber-800 px-3 py-1 text-xs font-semibold">
+                    Chưa dọn
+                  </span>
+
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    iconLeft="check_circle"
+                    onClick={() => markRoomCleanByCode(room.roomCode)}
+                    isLoading={updating}
+                    isDisabled={updating}
+                  >
+                    Đã dọn xong
+                  </Button>
+
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+
       </main>
     </div>
   );
