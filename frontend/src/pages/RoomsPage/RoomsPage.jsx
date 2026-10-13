@@ -285,11 +285,6 @@ const RoomsPage = () => {
     return filteredAndSortedRooms.slice(start, start + pageSize);
   }, [filteredAndSortedRooms, currentPage, pageSize]);
 
-  // Open Room Detail
-  const handleViewDetail = (room) => {
-    navigate(`/rooms/${room.id}`);
-  };
-
   // Open Booking Confirmation Modal
   const handleBookNow = (room) => {
     setBookingRoom(room);
@@ -436,7 +431,6 @@ const RoomsPage = () => {
                   key={room.id}
                   room={room}
                   index={index}
-                  onViewDetail={handleViewDetail}
                   onBookNow={handleBookNow}
                   onOpenGallery={handleOpenGallery}
                 />
@@ -587,17 +581,6 @@ const RoomsPage = () => {
 
               {/* Action buttons */}
               <div className="flex items-center gap-3 mt-1">
-                <button
-                  type="button"
-                  onClick={() => {
-                    const id = galleryRoom.id;
-                    setGalleryRoom(null);
-                    navigate(`/rooms/${id}`);
-                  }}
-                  className="px-4 py-2 text-xs font-semibold rounded-lg bg-white/10 hover:bg-white/20 text-white transition-colors cursor-pointer"
-                >
-                  Xem toàn bộ chi tiết phòng
-                </button>
                 <button
                   type="button"
                   onClick={() => {

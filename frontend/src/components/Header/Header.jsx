@@ -103,19 +103,6 @@ const Header = () => {
             </NavLink>
 
             <NavLink
-              to="/rooms/available"
-              className={({ isActive }) =>
-                `text-sm font-medium py-1 transition-colors relative ${
-                  isActive
-                    ? "text-primary font-bold after:content-[''] after:absolute after:-bottom-1 after:left-0 after:right-0 after:h-[2px] after:bg-accent"
-                    : 'text-text-secondary hover:text-primary'
-                }`
-              }
-            >
-              Tra cứu phòng
-            </NavLink>
-
-            <NavLink
               to="/services"
               className={({ isActive }) =>
                 `text-sm font-medium py-1 transition-colors relative ${
@@ -338,6 +325,20 @@ const Header = () => {
                               {user.role === 'LE_TAN' && (
                                 <>
                                   <Link
+                                    to="/rooms/available"
+                                    onClick={() => {
+                                      setDashboardSubmenuOpen(false);
+                                      setAccountMenuOpen(false);
+                                    }}
+                                    className="flex items-center gap-3 rounded-lg px-4 py-2.5 text-sm text-text-primary hover:bg-surface-alt hover:text-primary"
+                                  >
+                                    <span className="material-symbols-outlined text-[18px]">
+                                      search
+                                    </span>
+                                    Tra cứu phòng
+                                  </Link>
+
+                                  <Link
                                     to="/admin/check-in"
                                     onClick={() => {
                                       setDashboardSubmenuOpen(false);
@@ -454,18 +455,6 @@ const Header = () => {
             </Link>
 
             <Link
-              to="/rooms/available"
-              onClick={() => setMobileMenuOpen(false)}
-              className="text-sm font-semibold text-accent py-2 border-b border-border-custom/50 flex items-center justify-between"
-            >
-              <span>Tra cứu phòng</span>
-
-              <span className="material-symbols-outlined text-[16px]">
-                chevron_right
-              </span>
-            </Link>
-
-            <Link
               to="/services"
               onClick={() => setMobileMenuOpen(false)}
               className="text-sm font-medium text-text-secondary py-2 border-b border-border-custom/50 flex items-center justify-between"
@@ -542,6 +531,30 @@ const Header = () => {
                   Đăng nhập
                 </Link>
               )}
+
+              {user?.role === 'LE_TAN' && (
+                <div className="rounded-xl border border-border-custom bg-surface-alt/50 p-3">
+                  <p className="mb-2 text-xs font-bold text-primary">
+                    Bảng điều khiển · Lễ tân
+                  </p>
+
+                  {[
+                    { to: '/rooms/available', label: 'Tra cứu phòng' },
+                    { to: '/admin/check-in', label: 'Check-in' },
+                    { to: '/admin/checkout', label: 'Check-out' },
+                  ].map((item) => (
+                    <Link
+                      key={item.to}
+                      to={item.to}
+                      onClick={() => setMobileMenuOpen(false)}
+                      className="block rounded-lg px-3 py-2 text-sm font-medium text-primary hover:bg-surface-alt"
+                    >
+                      {item.label}
+                    </Link>
+                  ))}
+                </div>
+              )}
+
               <Link
                 to="/rooms/available"
                 onClick={() => setMobileMenuOpen(false)}

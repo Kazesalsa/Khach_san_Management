@@ -37,15 +37,11 @@ const BookingConfirmModal = ({
   const [bookingSuccess, setBookingSuccess] = useState(false);
   const [bookingRef, setBookingRef] = useState('');
 
-  // Anti-double booking timer (10 mins)
-  const [timerSeconds, setTimerSeconds] = useState(600);
-
   // Set default dates if not provided
   useEffect(() => {
     if (isOpen) {
       setBookingSuccess(false);
       setErrors({});
-      setTimerSeconds(600);
 
       const today = new Date();
       const tomorrow = new Date();
@@ -57,28 +53,6 @@ const BookingConfirmModal = ({
       setGuests(initialGuests || 2);
     }
   }, [isOpen, initialCheckIn, initialCheckOut, initialGuests]);
-
-  // Countdown timer for room lock
-  useEffect(() => {
-    if (!isOpen || bookingSuccess) return;
-    const interval = setInterval(() => {
-      setTimerSeconds((prev) => {
-        if (prev <= 1) {
-          clearInterval(interval);
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-    return () => clearInterval(interval);
-  }, [isOpen, bookingSuccess]);
-
-  // Format timer MM:SS
-  const formatTimer = (sec) => {
-    const mins = Math.floor(sec / 60);
-    const remainder = sec % 60;
-    return `${mins.toString().padStart(2, '0')}:${remainder.toString().padStart(2, '0')}`;
-  };
 
   // Calculate nights
   const calculateNights = () => {
@@ -240,21 +214,6 @@ const BookingConfirmModal = ({
         /* Booking Confirmation Form */
         <form onSubmit={handleConfirmBooking} className="flex flex-col gap-6">
           
-          {/* Anti-Double Booking Lock Notification */}
-          <div className="bg-amber-50 border border-amber-300 rounded-xl p-3.5 flex items-center justify-between gap-3 text-xs text-amber-900">
-            <div className="flex items-center gap-2">
-              <span className="material-symbols-outlined text-accent text-[20px] shrink-0">
-                lock_clock
-              </span>
-              <span>
-                Phòng đang được khóa tạm thời trên hệ thống trong:
-              </span>
-            </div>
-            <div className="px-2.5 py-1 rounded bg-amber-200/80 font-mono font-bold text-amber-950 text-xs shrink-0">
-              {formatTimer(timerSeconds)}
-            </div>
-          </div>
-
           {/* Room Brief Card */}
           <div className="flex flex-col sm:flex-row items-center gap-4 bg-surface-alt/40 p-3.5 rounded-xl border border-border-custom">
             <img

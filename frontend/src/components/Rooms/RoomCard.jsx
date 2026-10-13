@@ -6,7 +6,6 @@ import { DEFAULT_ROOM_IMAGE } from '../../services/roomService';
 
 const RoomCard = ({
   room,
-  onViewDetail,
   onBookNow,
   onOpenGallery,
   index = 0,
@@ -31,7 +30,7 @@ const RoomCard = ({
       {/* Media Column (Desktop 5 cols, Mobile 12 cols) */}
       <div 
         className="lg:col-span-5 relative overflow-hidden h-72 sm:h-80 lg:h-auto min-h-[280px] cursor-pointer"
-        onClick={() => (onOpenGallery ? onOpenGallery(room, 0) : onViewDetail(room))}
+         onClick={() => onOpenGallery?.(room, 0)}
       >
         <img
           src={primaryImage}
@@ -70,11 +69,7 @@ const RoomCard = ({
           type="button"
           onClick={(e) => {
             e.stopPropagation();
-            if (onOpenGallery) {
-              onOpenGallery(room, 0);
-            } else {
-              onViewDetail(room);
-            }
+            onOpenGallery?.(room, 0);
           }}
           className="absolute bottom-4 left-4 px-3 py-1.5 rounded-lg bg-surface/90 hover:bg-surface active:scale-95 backdrop-blur-md text-primary flex items-center gap-1.5 text-xs font-semibold shadow-sm z-10 transition-all cursor-pointer border border-border-custom/50 hover:border-accent group/btn"
           title="Xem album ảnh thực tế của phòng"
@@ -113,10 +108,7 @@ const RoomCard = ({
           </div>
 
           {/* Room Name */}
-          <h3
-            onClick={() => onViewDetail(room)}
-            className="font-headline text-xl sm:text-2xl text-primary font-bold mb-2 group-hover:text-accent transition-colors cursor-pointer"
-          >
+          <h3 className="font-headline text-xl sm:text-2xl text-primary font-bold mb-2">
             {room.name}
           </h3>
 
@@ -230,14 +222,6 @@ const RoomCard = ({
 
           {/* Actions */}
           <div className="flex items-center gap-2.5 sm:shrink-0">
-            <Button
-              variant="outline"
-              size="md"
-              onClick={() => onViewDetail(room)}
-              className="flex-1 sm:flex-initial"
-            >
-              Xem chi tiết
-            </Button>
             <Button
               variant="primary"
               size="md"
