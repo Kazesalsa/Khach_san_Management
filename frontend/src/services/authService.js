@@ -20,3 +20,13 @@ export async function getCurrentProfile(token) {
 
   return response.data;
 }
+
+export async function register(email, password, confirmPassword) {
+  const response = await axios.post(`${AUTH_API}/register`, {
+    email: email.trim(),
+    password,
+    confirmPassword,
+  });
+
+  return response.data;
+}
