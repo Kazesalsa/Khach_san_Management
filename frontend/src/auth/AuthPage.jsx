@@ -373,8 +373,6 @@ export default function AuthPage({ mode }) {
               {c.detail}
             </p>
 
-            )}
-
             {mode === "forgot" && forgotSent ? (
               <div className="space-y-4">
                 <div className="rounded-xl border border-success-custom/30 bg-success-custom/10 p-5 text-sm text-success-custom">
