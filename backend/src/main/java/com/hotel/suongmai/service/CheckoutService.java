@@ -68,17 +68,12 @@ public class CheckoutService {
         }
 
         // 1. Kiểm tra điều kiện chỉ cho trả phòng khi đã thanh toán xong
-        BigDecimal roomFee = booking.getEstimatedTotal() == null
-                ? BigDecimal.ZERO : booking.getEstimatedTotal();
-        BigDecimal serviceFee = suDungDichVuRepository.sumServiceFeeByBooking(booking.getId());
-        BigDecimal totalDue = roomFee.add(serviceFee);
-        BigDecimal paid = thanhToanRepository.sumPaidByBooking(booking.getId());
+        HoaDon invoice = hoaDonRepository
+                .findByBookingId(booking.getId())
+                .orElseThrow(() -> new UnpaidBookingException("Booking chưa có hóa đơn"));
 
-        if (paid.compareTo(totalDue) < 0) {
-            BigDecimal remaining = totalDue.subtract(paid);
-            throw new UnpaidBookingException(
-                    String.format("Chưa thể trả phòng: Đặt phòng %s còn khoản chưa thanh toán là %s VNĐ",
-                            bookingCode, remaining));
+        if (invoice.getStatus() != TrangThaiHoaDon.DA_THANH_TOAN && invoice.getStatus() != TrangThaiHoaDon.DA_CHOT) {
+            throw new UnpaidBookingException("Hóa đơn chưa được thanh toán đầy đủ");
         }
 
         // 2. Tìm nhân viên lễ tân thực hiện checkout
@@ -98,32 +93,32 @@ public class CheckoutService {
         for (BookingDetail detail : details) {
             detail.setActualCheckOutTime(now);
             detail.setStatus("DA_TRA_PHONG");
+
             if (staff != null) {
                 detail.setCheckOutStaff(staff);
             }
+
             bookingDetailRepository.save(detail);
 
-            // Đổi trạng thái phòng sang TRONG và CHUA_DON
             Room room = detail.getRoom();
+
             if (room != null) {
                 room.setUsageStatus(UsageStatus.TRONG);
                 room.setCleaningStatus(CleaningStatus.CHUA_DON);
                 roomRepository.save(room);
                 roomNumbers.add(room.getRoomNumber());
             }
-
-            // Chốt hóa đơn nếu có
-            HoaDon invoice = detail.getInvoice();
-            if (invoice != null) {
-                invoice.setStatus(TrangThaiHoaDon.DA_CHOT);
-                invoice.setFinalizedAt(now);
-                invoice.setRemainingAmount(BigDecimal.ZERO);
-                if (staff != null) {
-                    invoice.setFinalizedByStaff(staff);
-                }
-                hoaDonRepository.save(invoice);
-            }
         }
+
+        invoice.setStatus(TrangThaiHoaDon.DA_CHOT);
+        invoice.setFinalizedAt(now);
+        invoice.setRemainingAmount(BigDecimal.ZERO);
+
+        if (staff != null) {
+            invoice.setFinalizedByStaff(staff);
+        }
+
+        hoaDonRepository.save(invoice);
 
         String staffName = staff != null ? (staff.getHoNv() + " " + staff.getTenNv()) : username;
         log.info("Lễ tân {} đã hoàn tất trả phòng cho booking {} (các phòng: {})",
