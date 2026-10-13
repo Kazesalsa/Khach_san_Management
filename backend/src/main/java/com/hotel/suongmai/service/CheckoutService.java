@@ -120,7 +120,7 @@ public class CheckoutService {
 
         hoaDonRepository.save(invoice);
 
-        String staffName = staff != null ? (staff.getHoNv() + " " + staff.getTenNv()) : username;
+        String staffName = staff != null ? (staff.getHoNv() + " " + staff.getTenNv()) : (username != null ? username : "Lễ tân");
         log.info("Lễ tân {} đã hoàn tất trả phòng cho booking {} (các phòng: {})",
                 staffName, bookingCode, roomNumbers);
 
@@ -156,7 +156,13 @@ public class CheckoutService {
             BigDecimal roomFee = booking.getEstimatedTotal() == null
                     ? BigDecimal.ZERO : booking.getEstimatedTotal();
             BigDecimal serviceFee = suDungDichVuRepository.sumServiceFeeByBooking(id);
+            if (serviceFee == null) {
+                serviceFee = BigDecimal.ZERO;
+            }
             BigDecimal paid = thanhToanRepository.sumPaidByBooking(id);
+            if (paid == null) {
+                paid = BigDecimal.ZERO;
+            }
             return new BigDecimal[] { roomFee.add(serviceFee), paid };
         });
 
@@ -165,14 +171,28 @@ public class CheckoutService {
         BigDecimal remaining = totalDue.subtract(paid).max(BigDecimal.ZERO);
         String paymentStatus = paid.compareTo(totalDue) >= 0 ? PAID : UNPAID;
 
+        String roomNumber = detail.getRoom() != null ? detail.getRoom().getRoomNumber() : "";
+        Integer floor = detail.getRoom() != null ? detail.getRoom().getFloor() : 1;
+        String roomType = (detail.getRoom() != null && detail.getRoom().getRoomCategory() != null)
+                ? detail.getRoom().getRoomCategory().getName()
+                : "Tiêu chuẩn";
+
+        String guestName = (booking != null && booking.getCustomer() != null)
+                ? booking.getCustomer().getHoTen()
+                : "Khách vãng lai";
+        String phone = (booking != null && booking.getCustomer() != null && booking.getCustomer().getSoDienThoai() != null)
+                ? booking.getCustomer().getSoDienThoai()
+                : "—";
+        String bookingCode = booking != null ? booking.getBookingCode() : "";
+
         return new OccupiedRoomResponse(
                 detail.getId(),
-                detail.getRoom().getRoomNumber(),
-                detail.getRoom().getFloor(),
-                detail.getRoom().getRoomCategory().getName(),
-                booking.getCustomer().getHoTen(),
-                booking.getCustomer().getSoDienThoai(),
-                booking.getBookingCode(),
+                roomNumber,
+                floor,
+                roomType,
+                guestName,
+                phone,
+                bookingCode,
                 detail.getActualCheckInTime(),
                 detail.getExpectedCheckOutDate(),
                 detail.getGuestCount(),

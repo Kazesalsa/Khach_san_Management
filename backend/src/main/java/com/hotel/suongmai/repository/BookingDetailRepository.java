@@ -69,7 +69,7 @@ public interface BookingDetailRepository extends JpaRepository<BookingDetail, St
             "JOIN FETCH r.roomCategory " +
             "JOIN FETCH bd.booking b " +
             "JOIN FETCH b.customer " +
-            "WHERE b.status = 'DA_NHAN' " +
+            "WHERE b.status = com.hotel.suongmai.entity.BookingStatus.DA_NHAN " +
             "AND bd.actualCheckInTime IS NOT NULL " +
             "AND bd.actualCheckOutTime IS NULL " +
             "ORDER BY r.roomNumber")
