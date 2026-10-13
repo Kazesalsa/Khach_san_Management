@@ -740,12 +740,6 @@ const RoomDetailPage = () => {
               <div className="space-y-2 text-[11px] text-text-secondary pt-2">
                 <div className="flex items-center gap-2">
                   <span className="material-symbols-outlined text-accent text-[17px]">
-                    lock
-                  </span>
-                  <span>Khóa phòng 10 phút chống trùng lịch (Anti-Double Booking)</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="material-symbols-outlined text-accent text-[17px]">
                     event_available
                   </span>
                   <span>Miễn phí hủy phòng trước 48 giờ</span>
