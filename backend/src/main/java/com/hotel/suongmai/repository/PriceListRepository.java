@@ -7,10 +7,19 @@ import org.springframework.stereotype.Repository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 
 @Repository
 public interface PriceListRepository extends JpaRepository<PriceList, String> {
+
+    @Query("""
+            SELECT priceList
+            FROM PriceList priceList
+            JOIN FETCH priceList.roomCategory
+            ORDER BY priceList.startDate DESC, priceList.endDate DESC, priceList.id ASC
+            """)
+    List<PriceList> findAllWithRoomCategoryOrderByStartDateDesc();
 
     Optional<PriceList> findFirstByRoomCategory_IdAndStartDateLessThanEqualAndEndDateGreaterThanEqualAndStatus(
             String categoryId, LocalDateTime checkIn, LocalDateTime checkOut, String status);
