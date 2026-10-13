@@ -3,7 +3,6 @@ import { useSearchParams, Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import Button from '../../components/ui/Button';
 import Badge from '../../components/ui/Badge';
-import { useToast } from '../../components/ui/Toast';
 import { getPaymentStatus } from '../../services/paymentService';
 
 const formatVND = (n) =>
@@ -12,7 +11,6 @@ const formatVND = (n) =>
 export default function PaymentResultPage() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const { addToast } = useToast();
 
   const [loading, setLoading] = useState(true);
   const [paymentInfo, setPaymentInfo] = useState(null);
@@ -56,7 +54,7 @@ export default function PaymentResultPage() {
     };
 
     verifyStatus();
-  }, [orderCode, bookingCodeParam, isCancelled, paramStatus, paramCode]);
+  }, [orderCode, bookingCodeParam, isCancelled, paramStatus, paramCode, navigate]);
 
   const isSuccess = !isCancelled && (paymentInfo?.status === 'PAID' || paramStatus === 'PAID' || paramCode === '00');
   const bookingCode = paymentInfo?.bookingCode || bookingCodeParam || '—';

@@ -49,4 +49,8 @@ public class HoaDon {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "nhan_vien_chot_id")
     private NhanVien finalizedByStaff;
+
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "phieu_dat_phong_id", unique = true)
+    private Booking booking;
 }

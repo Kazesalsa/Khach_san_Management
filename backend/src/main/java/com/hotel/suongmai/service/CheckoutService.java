@@ -68,17 +68,12 @@ public class CheckoutService {
         }
 
         // 1. Kiểm tra điều kiện chỉ cho trả phòng khi đã thanh toán xong
-        BigDecimal roomFee = booking.getEstimatedTotal() == null
-                ? BigDecimal.ZERO : booking.getEstimatedTotal();
-        BigDecimal serviceFee = suDungDichVuRepository.sumServiceFeeByBooking(booking.getId());
-        BigDecimal totalDue = roomFee.add(serviceFee);
-        BigDecimal paid = thanhToanRepository.sumPaidByBooking(booking.getId());
+        HoaDon invoice = hoaDonRepository
+                .findByBookingId(booking.getId())
+                .orElseThrow(() -> new UnpaidBookingException("Booking chưa có hóa đơn"));
 
-        if (paid.compareTo(totalDue) < 0) {
-            BigDecimal remaining = totalDue.subtract(paid);
-            throw new UnpaidBookingException(
-                    String.format("Chưa thể trả phòng: Đặt phòng %s còn khoản chưa thanh toán là %s VNĐ",
-                            bookingCode, remaining));
+        if (invoice.getStatus() != TrangThaiHoaDon.DA_THANH_TOAN && invoice.getStatus() != TrangThaiHoaDon.DA_CHOT) {
+            throw new UnpaidBookingException("Hóa đơn chưa được thanh toán đầy đủ");
         }
 
         // 2. Tìm nhân viên lễ tân thực hiện checkout
@@ -98,34 +93,34 @@ public class CheckoutService {
         for (BookingDetail detail : details) {
             detail.setActualCheckOutTime(now);
             detail.setStatus("DA_TRA_PHONG");
+
             if (staff != null) {
                 detail.setCheckOutStaff(staff);
             }
+
             bookingDetailRepository.save(detail);
 
-            // Đổi trạng thái phòng sang TRONG và CHUA_DON
             Room room = detail.getRoom();
+
             if (room != null) {
                 room.setUsageStatus(UsageStatus.TRONG);
                 room.setCleaningStatus(CleaningStatus.CHUA_DON);
                 roomRepository.save(room);
                 roomNumbers.add(room.getRoomNumber());
             }
-
-            // Chốt hóa đơn nếu có
-            HoaDon invoice = detail.getInvoice();
-            if (invoice != null) {
-                invoice.setStatus(TrangThaiHoaDon.DA_CHOT);
-                invoice.setFinalizedAt(now);
-                invoice.setRemainingAmount(BigDecimal.ZERO);
-                if (staff != null) {
-                    invoice.setFinalizedByStaff(staff);
-                }
-                hoaDonRepository.save(invoice);
-            }
         }
 
-        String staffName = staff != null ? (staff.getHoNv() + " " + staff.getTenNv()) : username;
+        invoice.setStatus(TrangThaiHoaDon.DA_CHOT);
+        invoice.setFinalizedAt(now);
+        invoice.setRemainingAmount(BigDecimal.ZERO);
+
+        if (staff != null) {
+            invoice.setFinalizedByStaff(staff);
+        }
+
+        hoaDonRepository.save(invoice);
+
+        String staffName = staff != null ? (staff.getHoNv() + " " + staff.getTenNv()) : (username != null ? username : "Lễ tân");
         log.info("Lễ tân {} đã hoàn tất trả phòng cho booking {} (các phòng: {})",
                 staffName, bookingCode, roomNumbers);
 
@@ -161,7 +156,13 @@ public class CheckoutService {
             BigDecimal roomFee = booking.getEstimatedTotal() == null
                     ? BigDecimal.ZERO : booking.getEstimatedTotal();
             BigDecimal serviceFee = suDungDichVuRepository.sumServiceFeeByBooking(id);
+            if (serviceFee == null) {
+                serviceFee = BigDecimal.ZERO;
+            }
             BigDecimal paid = thanhToanRepository.sumPaidByBooking(id);
+            if (paid == null) {
+                paid = BigDecimal.ZERO;
+            }
             return new BigDecimal[] { roomFee.add(serviceFee), paid };
         });
 
@@ -170,14 +171,28 @@ public class CheckoutService {
         BigDecimal remaining = totalDue.subtract(paid).max(BigDecimal.ZERO);
         String paymentStatus = paid.compareTo(totalDue) >= 0 ? PAID : UNPAID;
 
+        String roomNumber = detail.getRoom() != null ? detail.getRoom().getRoomNumber() : "";
+        Integer floor = detail.getRoom() != null ? detail.getRoom().getFloor() : 1;
+        String roomType = (detail.getRoom() != null && detail.getRoom().getRoomCategory() != null)
+                ? detail.getRoom().getRoomCategory().getName()
+                : "Tiêu chuẩn";
+
+        String guestName = (booking != null && booking.getCustomer() != null)
+                ? booking.getCustomer().getHoTen()
+                : "Khách vãng lai";
+        String phone = (booking != null && booking.getCustomer() != null && booking.getCustomer().getSoDienThoai() != null)
+                ? booking.getCustomer().getSoDienThoai()
+                : "—";
+        String bookingCode = booking != null ? booking.getBookingCode() : "";
+
         return new OccupiedRoomResponse(
                 detail.getId(),
-                detail.getRoom().getRoomNumber(),
-                detail.getRoom().getFloor(),
-                detail.getRoom().getRoomCategory().getName(),
-                booking.getCustomer().getHoTen(),
-                booking.getCustomer().getSoDienThoai(),
-                booking.getBookingCode(),
+                roomNumber,
+                floor,
+                roomType,
+                guestName,
+                phone,
+                bookingCode,
                 detail.getActualCheckInTime(),
                 detail.getExpectedCheckOutDate(),
                 detail.getGuestCount(),

@@ -177,13 +177,13 @@ function RoomAvailabilityPage() {
         <div className="max-w-5xl mx-auto px-4 sm:px-6 py-6">
           <div className="flex items-start justify-between gap-4">
             <div>
-              <p className="text-accent text-xs font-bold uppercase tracking-[0.2em]">
+              <p className="text-accent text-xs font-semibold">
                 Sương Mai Hotel
               </p>
-              <h1 className="font-headline text-2xl sm:text-3xl font-bold mt-1">
+              <h1 className="text-2xl sm:text-3xl font-bold mt-1">
                 Tra Cứu Phòng Trống
               </h1>
-              <p className="text-text-on-dark/70 text-sm mt-2">
+              <p className="text-text-on-dark/70 text-sm mt-1">
                 Chọn ngày nhận phòng và trả phòng để xem danh sách phòng còn trống
               </p>
             </div>
@@ -201,10 +201,7 @@ function RoomAvailabilityPage() {
       <main className="max-w-5xl mx-auto px-4 sm:px-6 py-8 space-y-8">
         {/* Search Form */}
         <section className="bg-surface rounded-2xl border border-border-custom shadow-sm p-6">
-          <h2 className="font-headline text-xl font-bold text-primary mb-5 flex items-center gap-2">
-            <span className="material-symbols-outlined text-accent text-[22px]">
-              search
-            </span>
+          <h2 className="text-xl font-bold text-primary mb-5">
             Chọn Thời Gian Lưu Trú
           </h2>
 

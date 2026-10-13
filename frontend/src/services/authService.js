@@ -30,3 +30,11 @@ export async function register(email, password, confirmPassword) {
 
   return response.data;
 }
+
+export async function forgotPassword(email) {
+  const response = await axios.post(`${AUTH_API}/forgot-password`, {
+    email: email.trim(),
+  });
+
+  return response.data;
+}

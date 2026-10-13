@@ -34,6 +34,7 @@ const RoomFilterBar = ({
   onSortChange,
   onResetFilters,
   totalResults,
+  categoryCounts = {},
 }) => {
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
 
@@ -57,6 +58,7 @@ const RoomFilterBar = ({
           <div className="flex items-center gap-2 overflow-x-auto pb-1 xl:pb-0 scrollbar-none" id="categoryTabs">
             {ROOM_CATEGORIES.map((cat) => {
               const isActive = selectedCategory === cat.id;
+              const count = categoryCounts[cat.id] ?? cat.count;
               return (
                 <button
                   key={cat.id}
@@ -69,13 +71,15 @@ const RoomFilterBar = ({
                   }`}
                 >
                   <span>{cat.label}</span>
-                  <span
-                    className={`text-[10px] px-1.5 py-0.2 rounded-full ${
-                      isActive ? 'bg-accent text-primary font-bold' : 'bg-white/80 text-text-secondary'
-                    }`}
-                  >
-                    {cat.count}
-                  </span>
+                  {count !== undefined && (
+                    <span
+                      className={`text-[10px] px-1.5 py-0.2 rounded-full ${
+                        isActive ? 'bg-accent text-primary font-bold' : 'bg-white/80 text-text-secondary'
+                      }`}
+                    >
+                      {count}
+                    </span>
+                  )}
                 </button>
               );
             })}

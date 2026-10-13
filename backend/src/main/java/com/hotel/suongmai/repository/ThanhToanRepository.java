@@ -1,14 +1,15 @@
 package com.hotel.suongmai.repository;
+import com.hotel.suongmai.entity.LoaiGiaoDich;
 import com.hotel.suongmai.entity.ThanhToan;
 
 import java.math.BigDecimal;
-
+import java.util.List;
+import com.hotel.suongmai.entity.TrangThaiThanhToan;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
-import java.util.List;
 import java.util.Optional;
 
 @Repository
@@ -24,6 +25,11 @@ public interface ThanhToanRepository extends JpaRepository<ThanhToan, String> {
             "AND t.transactionType = 'TIEN_COC' " +
             "AND t.status = 'THANH_CONG'")
     BigDecimal sumSuccessfulDepositByBookingId(@Param("bookingId") String bookingId);
+    Optional<ThanhToan> findFirstByInvoiceIdAndTransactionTypeAndStatusOrderByTransactionTimeDesc(
+            String invoiceId,
+            LoaiGiaoDich transactionType,
+            TrangThaiThanhToan status
+    );
 
     Optional<ThanhToan> findByReferenceCode(String referenceCode);
 

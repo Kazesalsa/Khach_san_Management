@@ -4,11 +4,11 @@
  */
 
 export const ROOM_CATEGORIES = [
-  { id: 'all', label: 'Tất cả hạng phòng', count: 4 },
-  { id: 'deluxe', label: 'Phòng Deluxe', count: 2 },
-  { id: 'indochine-suite', label: 'Suite Đông Dương', count: 1 },
-  { id: 'family', label: 'Căn Hộ Gia Đình', count: 1 },
-  { id: 'president', label: 'Suite Tổng Thống', count: 1 },
+  { id: 'all', label: 'Tất cả hạng phòng' },
+  { id: 'standard', label: 'Tiêu Chuẩn (Standard)' },
+  { id: 'superior', label: 'Cao Cấp (Superior)' },
+  { id: 'deluxe', label: 'Phòng Deluxe' },
+  { id: 'suite', label: 'Suite Tổng Thống' },
 ];
 
 export const ROOM_VIEWS = [
@@ -33,8 +33,7 @@ export const SORT_OPTIONS = [
   { value: 'area', label: 'Diện tích lớn nhất' },
 ];
 
-// Danh sách phòng mẫu đã được dọn sạch hoàn toàn, dữ liệu hiện được lấy trực tiếp từ Database
-export const ROOMS_DATA = [];
+
 
 export const COMPARISON_MATRIX = {
   columns: [

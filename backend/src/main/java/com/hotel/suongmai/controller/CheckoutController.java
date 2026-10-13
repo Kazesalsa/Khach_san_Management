@@ -22,6 +22,7 @@ public class CheckoutController {
 
     private final CheckoutService checkoutService;
 
+
     @PreAuthorize("hasAnyRole('LE_TAN', 'CHU_KHACH_SAN')")
     @GetMapping("/checkout/rooms")
     public ResponseEntity<List<OccupiedRoomResponse>> getOccupiedRooms() {

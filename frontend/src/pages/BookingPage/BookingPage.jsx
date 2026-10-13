@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useSearchParams, Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Input } from '../../components/ui/Input';
@@ -6,7 +6,7 @@ import Button from '../../components/ui/Button';
 import Badge from '../../components/ui/Badge';
 import DatePicker from '../../components/ui/DatePicker';
 import { createDepositPayment, redirectToPayOS } from '../../services/paymentService';
-import { getPublicRoomDetail } from '../../services/roomService';
+import { getPublicRoomDetail, DEFAULT_ROOM_IMAGE } from '../../services/roomService';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 const formatVND = (n) =>
@@ -134,9 +134,9 @@ export default function BookingPage() {
     if (roomId) {
       getPublicRoomDetail(roomId).then((dbRoom) => {
         if (mounted && dbRoom) {
-          const categorySlug = dbRoom.categoryId === 'cat-4' ? 'president' :
+          const categorySlug = dbRoom.categoryId === 'cat-4' ? 'suite' :
                                dbRoom.categoryId === 'cat-3' ? 'deluxe' :
-                               dbRoom.categoryId === 'cat-2' ? 'indochine-suite' : 'deluxe';
+                               dbRoom.categoryId === 'cat-2' ? 'superior' : 'standard';
           setRoom({
             id: dbRoom.id,
             slug: dbRoom.roomCode?.toLowerCase() || dbRoom.id,
@@ -166,7 +166,7 @@ export default function BookingPage() {
               depositPercent: 30,
             },
             policies: {
-              deposit: 'Đặt cọc 30% giữ phòng ngay',
+              deposit: 'Đặt cọc để giữ phòng ngay',
             }
           });
         }
@@ -319,13 +319,19 @@ export default function BookingPage() {
               <section className="bg-surface rounded-2xl border border-border-custom shadow-sm overflow-hidden">
                 <div className="relative h-52 sm:h-64">
                   <img
-                    src={room.images[0]?.url}
+                    src={room.images[0]?.url || DEFAULT_ROOM_IMAGE}
                     alt={room.name}
                     className="w-full h-full object-cover"
+                    onError={(e) => {
+                      e.currentTarget.onerror = null;
+                      e.currentTarget.src = DEFAULT_ROOM_IMAGE;
+                    }}
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-primary/80 to-transparent" />
                   <div className="absolute bottom-4 left-5 right-5">
-                    <Badge variant="goldSolid" className="mb-2">{room.category === 'president' ? 'Presidential Suite' : room.category.charAt(0).toUpperCase() + room.category.slice(1)}</Badge>
+                    <Badge variant="goldSolid" className="mb-2">
+                      {room.category === 'suite' || room.category === 'president' ? 'Presidential Suite' : (room.category ? room.category.charAt(0).toUpperCase() + room.category.slice(1) : 'Standard')}
+                    </Badge>
                     <h2 className="font-headline text-xl sm:text-2xl font-bold text-white">{room.name}</h2>
                     <p className="text-white/70 text-xs mt-1">{room.floor} · {room.specs.area} m² · {room.specs.bed}</p>
                   </div>
