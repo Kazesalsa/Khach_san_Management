@@ -2,7 +2,8 @@ package com.hotel.suongmai.entity;
 
 import jakarta.persistence.*;
 import lombok.Data;
-import java.time.LocalDate;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 @Entity
 @Table(name = "phieu_dat_phong")
@@ -36,6 +37,7 @@ public class Booking {
     private java.math.BigDecimal requiredDeposit;
 
     @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.NAMED_ENUM)
     @Column(name = "trang_thai", nullable = false)
     private BookingStatus status;
 }
