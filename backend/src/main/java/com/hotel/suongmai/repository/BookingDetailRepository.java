@@ -14,6 +14,22 @@ import org.springframework.data.repository.query.Param;
 public interface BookingDetailRepository extends JpaRepository<BookingDetail, String> {
     List<BookingDetail> findByBookingId(String bookingId);
 
+    @Query(value = """
+            SELECT EXISTS (
+                SELECT 1
+                FROM chi_tiet_dat_phong detail
+                JOIN phieu_dat_phong booking ON booking.id = detail.phieu_dat_phong_id
+                WHERE detail.phong_id = :roomId
+                  AND detail.ngay_nhan_du_kien < :checkOut
+                  AND detail.ngay_tra_du_kien > :checkIn
+                  AND CAST(booking.trang_thai AS VARCHAR) IN ('CHO_XAC_NHAN', 'DA_DAT', 'DA_NHAN')
+            )
+            """, nativeQuery = true)
+    boolean existsActiveBookingOverlap(
+            @Param("roomId") String roomId,
+            @Param("checkIn") LocalDate checkIn,
+            @Param("checkOut") LocalDate checkOut);
+
     @Query("SELECT bd.room.id FROM BookingDetail bd " +
             "WHERE bd.expectedCheckInDate < :checkOut " +
             "AND bd.expectedCheckOutDate > :checkIn " +

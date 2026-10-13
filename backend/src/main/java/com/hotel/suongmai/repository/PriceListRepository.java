@@ -23,6 +23,9 @@ public interface PriceListRepository extends JpaRepository<PriceList, String> {
 
     Optional<PriceList> findFirstByRoomCategory_IdAndStartDateLessThanEqualAndEndDateGreaterThanEqualAndStatus(
             String categoryId, LocalDateTime checkIn, LocalDateTime checkOut, String status);
+
+    Optional<PriceList> findFirstByRoomCategory_IdAndStartDateLessThanEqualAndEndDateGreaterThanEqualAndStatusOrderByStartDateDesc(
+            String categoryId, LocalDateTime effectiveAtStart, LocalDateTime effectiveAtEnd, String status);
     
     @Query("SELECT COUNT(p) > 0 FROM PriceList p WHERE p.roomCategory.id = :categoryId " +
            "AND p.startDate <= :endDate AND p.endDate >= :startDate " +
