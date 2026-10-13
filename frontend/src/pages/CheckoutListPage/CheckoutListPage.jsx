@@ -369,6 +369,7 @@ export default function CheckoutListPage() {
   }, []);
 
   const [rooms, setRooms] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [fetchNotice, setFetchNotice] = useState('');
 
   useEffect(() => {
@@ -635,7 +636,12 @@ export default function CheckoutListPage() {
         </div>
 
         {/* Danh sách */}
-        {filtered.length === 0 ? (
+        {loading ? (
+          <div className="bg-surface rounded-2xl border border-border-custom shadow-sm p-14 flex flex-col items-center justify-center text-center gap-3">
+            <span className="material-symbols-outlined text-4xl text-accent animate-spin">progress_activity</span>
+            <p className="text-sm font-medium text-text-secondary">Đang tải danh sách phòng...</p>
+          </div>
+        ) : filtered.length === 0 ? (
           <div className="bg-surface rounded-2xl border border-border-custom shadow-sm p-14 flex flex-col items-center text-center gap-3">
             <span className="material-symbols-outlined text-5xl text-text-secondary/30">search_off</span>
             <h3 className="font-headline text-xl font-bold text-primary">Không tìm thấy kết quả</h3>
