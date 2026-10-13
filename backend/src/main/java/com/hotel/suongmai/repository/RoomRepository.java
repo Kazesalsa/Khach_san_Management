@@ -16,6 +16,7 @@ import java.util.Optional;
 public interface RoomRepository extends JpaRepository<Room, String> {
     Optional<Room> findByRoomCode(String roomCode);
     List<Room> findByUsageStatusAndCleaningStatus(UsageStatus usageStatus, CleaningStatus cleaningStatus);
+    List<Room> findAllByOrderByFloorAscRoomNumberAsc();
 
     @Query(value = "SELECT r.* FROM phong r " +
             "WHERE NOT EXISTS ( " +

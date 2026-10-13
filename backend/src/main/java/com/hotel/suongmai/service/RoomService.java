@@ -31,6 +31,11 @@ public class RoomService {
         return roomRepository.save(room);
     }
 
+    @Transactional
+    public List<Room> findAllRooms() {
+        return roomRepository.findAllByOrderByFloorAscRoomNumberAsc();
+    }
+
     @Transactional()
     public List<Room> findAvailableRooms(LocalDate fromDate, LocalDate toDate) {
         if (fromDate == null || toDate == null || !toDate.isAfter(fromDate)) {

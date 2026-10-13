@@ -79,6 +79,21 @@ class RoomServiceTest {
     }
 
     @Test
+    @DisplayName("Thành công: Trả về toàn bộ phòng đã sắp xếp theo tầng và số phòng")
+    void findAllRooms_ReturnsRoomsOrderedForDashboard() {
+        Room cleanedRoom = new Room();
+        cleanedRoom.setRoomCode("P102");
+        cleanedRoom.setCleaningStatus(CleaningStatus.DA_DON_XONG);
+        List<Room> rooms = List.of(mockRoom, cleanedRoom);
+        when(roomRepository.findAllByOrderByFloorAscRoomNumberAsc()).thenReturn(rooms);
+
+        List<Room> result = roomService.findAllRooms();
+
+        assertThat(result).isEqualTo(rooms);
+        verify(roomRepository).findAllByOrderByFloorAscRoomNumberAsc();
+    }
+
+    @Test
     @DisplayName("Thành công: Trả về danh sách phòng trống và truyền đúng khoảng ngày xuống repository")
     void findAvailableRooms_ReturnsAvailableRooms() {
         LocalDate fromDate = LocalDate.of(2026, 10, 12);
