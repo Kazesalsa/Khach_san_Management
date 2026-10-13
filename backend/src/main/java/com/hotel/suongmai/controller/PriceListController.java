@@ -1,6 +1,7 @@
 package com.hotel.suongmai.controller;
 
 import com.hotel.suongmai.dto.CreatePriceListRequest;
+import com.hotel.suongmai.dto.PriceListListItemResponse;
 import com.hotel.suongmai.dto.PriceListResponse;
 import com.hotel.suongmai.dto.PriceListResult;
 import com.hotel.suongmai.dto.RoomCategoryOptionResponse;
@@ -30,6 +31,11 @@ import java.util.List;
 public class PriceListController {
 
     private final PriceListService priceListService;
+
+    @GetMapping
+    public ResponseEntity<List<PriceListListItemResponse>> getPriceLists() {
+        return ResponseEntity.ok(priceListService.getPriceLists());
+    }
 
     /**
      * Lấy danh sách loại phòng để đổ vào Dropdown.

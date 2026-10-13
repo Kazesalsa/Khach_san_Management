@@ -1,5 +1,6 @@
 package com.hotel.suongmai.service;
 
+import com.hotel.suongmai.dto.PriceListListItemResponse;
 import com.hotel.suongmai.dto.PriceListResult;
 import com.hotel.suongmai.dto.RoomCategoryOptionResponse;
 import com.hotel.suongmai.entity.PriceList;
@@ -23,6 +24,14 @@ public class PriceListService {
     private final PriceListRepository priceListRepository;
     private final BookingRepository bookingRepository;
     private final RoomCategoryRepository roomCategoryRepository;
+
+    @Transactional(readOnly = true)
+    public List<PriceListListItemResponse> getPriceLists() {
+        return priceListRepository.findAllWithRoomCategoryOrderByStartDateDesc()
+                .stream()
+                .map(PriceListListItemResponse::from)
+                .toList();
+    }
 
     /**
      * Tạo bảng giá phòng mới (UC-01 Main Flow + EF-1 + AF-2)
