@@ -94,7 +94,7 @@ class PriceListServiceTest {
         // Giả lập tìm thấy loại phòng
         when(roomCategoryRepository.findById("cat-1")).thenReturn(Optional.of(mockCategory));
         // Giả lập KHÔNG bị trùng bảng giá (EF-1 false)
-        when(priceListRepository.existsOverlappingPrice(eq("cat-1"), eq(fromDate), eq(toDate), isNull())).thenReturn(false);
+        when(priceListRepository.existsOverlappingPrice(eq("cat-1"), eq(fromDate), eq(toDate))).thenReturn(false);
         // Giả lập KHÔNG có booking cũ (AF-2 false)
         when(bookingRepository.existsActiveBookingsInDateRange(eq("cat-1"), eq(fromDate.toLocalDate()), eq(toDate.toLocalDate()))).thenReturn(false);
         // Giả lập lưu thành công
@@ -115,7 +115,7 @@ class PriceListServiceTest {
     void createPriceList_ThrowsException_WhenOverlapping() {
         when(roomCategoryRepository.findById("cat-1")).thenReturn(Optional.of(mockCategory));
         // Giả lập BỊ TRÙNG bảng giá (EF-1 true)
-        when(priceListRepository.existsOverlappingPrice(eq("cat-1"), eq(fromDate), eq(toDate), isNull())).thenReturn(true);
+        when(priceListRepository.existsOverlappingPrice(eq("cat-1"), eq(fromDate), eq(toDate))).thenReturn(true);
 
         // Kiểm tra xem Service có ném đúng Exception như đặc tả không
         assertThatThrownBy(() -> priceListService
@@ -131,7 +131,7 @@ class PriceListServiceTest {
     @DisplayName("Xử lý AF-2: Trả về flag = true khi có booking cũ rơi vào khoảng ngày đổi giá")
     void createPriceList_ReturnsFlagTrue_WhenExistingBookingsFound() {
         when(roomCategoryRepository.findById("cat-1")).thenReturn(Optional.of(mockCategory));
-        when(priceListRepository.existsOverlappingPrice(eq("cat-1"), eq(fromDate), eq(toDate), isNull())).thenReturn(false);
+        when(priceListRepository.existsOverlappingPrice(eq("cat-1"), eq(fromDate), eq(toDate))).thenReturn(false);
         // Giả lập CÓ booking cũ trong khoảng ngày (AF-2 true)
         when(bookingRepository.existsActiveBookingsInDateRange(eq("cat-1"), eq(fromDate.toLocalDate()), eq(toDate.toLocalDate()))).thenReturn(true);
         when(priceListRepository.save(any(PriceList.class))).thenAnswer(invocation -> invocation.getArgument(0));
