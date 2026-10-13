@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import com.hotel.suongmai.dto.AuthErrorResponse;
+import com.hotel.suongmai.dto.ForgotPasswordRequest;
 import com.hotel.suongmai.dto.RegisterRequest;
 import com.hotel.suongmai.controller.AuthController;
 
@@ -40,6 +41,12 @@ public class AuthExceptionHandler {
                 .body(new AuthErrorResponse("Token không hợp lệ hoặc đã hết hạn"));
     }
 
+    @ExceptionHandler(AccountNotFoundException.class)
+    public ResponseEntity<AuthErrorResponse> handleAccountNotFound(AccountNotFoundException exception) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(new AuthErrorResponse(exception.getMessage()));
+    }
+
     @ExceptionHandler(ProfileNotFoundException.class)
     public ResponseEntity<AuthErrorResponse> handleProfileNotFound(ProfileNotFoundException exception) {
         return ResponseEntity.status(HttpStatus.NOT_FOUND)
@@ -59,6 +66,8 @@ public class AuthExceptionHandler {
                 .forEach(error -> errors.putIfAbsent(error.getField(), error.getDefaultMessage()));
         String message = exception.getBindingResult().getTarget() instanceof RegisterRequest
                 ? "Dữ liệu đăng ký không hợp lệ"
+                : exception.getBindingResult().getTarget() instanceof ForgotPasswordRequest
+                ? "Dữ liệu yêu cầu khôi phục mật khẩu không hợp lệ"
                 : "Dữ liệu đăng nhập không hợp lệ";
         return ResponseEntity.badRequest()
                 .body(new AuthErrorResponse(message, errors));
