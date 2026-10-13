@@ -42,6 +42,7 @@ public class AuthService {
     private final NhanVienRepository nhanVienRepository;
     private final TaiKhoanRepository taiKhoanRepository;
     private final PasswordEncoder passwordEncoder;
+    private final EmailService emailService;
 
     public LoginResponse login(LoginRequest request) {
         Authentication authentication = authenticationManager.authenticate(
@@ -83,6 +84,8 @@ public class AuthService {
         customer.setHoTen(DEFAULT_CUSTOMER_NAME);
         customer.setEmail(email);
         khachHangRepository.save(customer);
+
+        emailService.sendWelcomeRegistrationEmail(email, DEFAULT_CUSTOMER_NAME);
 
         return new RegisterResponse(
                 savedAccount.getId(),

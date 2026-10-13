@@ -10,13 +10,13 @@ import vn.payos.PayOS;
 @Getter
 public class PayOSConfig {
 
-    @Value("${payos.client-id:51427319-9751-42d2-b369-28838940e205}")
+    @Value("${payos.client-id:3e809569-9fb6-4b40-8863-ee97df31ad4f}")
     private String clientId;
 
-    @Value("${payos.api-key:d975a665-079b-47a1-a269-d779e1a546d3}")
+    @Value("${payos.api-key:34540991-1430-4d0f-a2be-0d800ec50f8e}")
     private String apiKey;
 
-    @Value("${payos.checksum-key:eaa65f16a5dd2dd9b4e569223f28e07341055aa0a5796a3554b1ef2c0037a3bd}")
+    @Value("${payos.checksum-key:0bc7d96e73db7bc5ff472026fa247b3ca9f3d11d6a6d4444127d46b77ba45013}")
     private String checksumKey;
 
     @Value("${payos.return-url:http://localhost:5173/payment/result}")
