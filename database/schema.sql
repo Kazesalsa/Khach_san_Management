@@ -278,23 +278,23 @@ CREATE UNIQUE INDEX IF NOT EXISTS uq_chi_tiet_dat_phong_hoa_don
     ON chi_tiet_dat_phong (hoa_don_id)
     WHERE hoa_don_id IS NOT NULL;
 
-CREATE INDEX IF NOT EXISTS idx_hoa_don_revenue_date_status
+CREATE INDEX IF NOT EXISTS idx_hoa_don_trang_thai_doanh_thu_ngay
     ON hoa_don (thoi_gian_chot, trang_thai);
 
-CREATE INDEX IF NOT EXISTS idx_phong_room_category
+CREATE INDEX IF NOT EXISTS idx_phong_loai_phong
     ON phong (ma_loai_phong);
 
-CREATE OR REPLACE VIEW v_revenue_detail AS
+CREATE OR REPLACE VIEW v_chi_tiet_doanh_thu AS
 SELECT
-    hd.id AS invoice_id,
-    ct.id AS booking_detail_id,
-    hd.thoi_gian_chot AS revenue_at,
-    hd.trang_thai AS invoice_status,
-    lp.id AS room_category_id,
-    lp.ten AS room_category_name,
-    hd.tien_phong AS room_revenue,
-    hd.tien_dich_vu AS service_revenue,
-    hd.tong_tien AS total_revenue
+    hd.id AS ma_hoa_don,
+    ct.id AS ma_chi_tiet_dat_phong,
+    hd.thoi_gian_chot AS thoi_gian_doanh_thu,
+    hd.trang_thai AS trang_thai_hoa_don,
+    lp.id AS ma_loai_phong,
+    lp.ten AS ten_loai_phong,
+    hd.tien_phong AS doanh_thu_phong,
+    hd.tien_dich_vu AS doanh_thu_dich_vu,
+    hd.tong_tien AS tong_doanh_thu
 FROM hoa_don hd
 JOIN chi_tiet_dat_phong ct ON ct.hoa_don_id = hd.id
 JOIN phong p ON p.id = ct.phong_id
