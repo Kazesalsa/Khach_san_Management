@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ROOMS_DATA } from '../../data/roomsData';
+import { getPublicRoomDetail } from '../../services/roomService';
 import Breadcrumb from '../../components/ui/Breadcrumb';
 import Badge from '../../components/ui/Badge';
 import Button from '../../components/ui/Button';
@@ -17,9 +17,94 @@ const RoomDetailPage = () => {
   const navigate = useNavigate();
   const { addToast } = useToast();
 
-  // Find room data
-  const currentRoom =
-    ROOMS_DATA.find((r) => r.id === roomId || r.slug === roomId) || ROOMS_DATA[0];
+  const [currentRoom, setCurrentRoom] = useState(null);
+
+  // Tải chi tiết phòng và bộ sưu tập ảnh từ database
+  useEffect(() => {
+    let mounted = true;
+    if (roomId) {
+      getPublicRoomDetail(roomId).then((dbRoom) => {
+        if (mounted && dbRoom) {
+          const mapped = {
+            id: dbRoom.id,
+            slug: dbRoom.roomCode?.toLowerCase() || dbRoom.id,
+            roomCode: dbRoom.roomCode,
+            roomNumber: dbRoom.roomNumber,
+            name: dbRoom.name,
+            nameEn: `${dbRoom.categoryName} Room ${dbRoom.roomNumber}`,
+            category: dbRoom.categoryId === 'cat-4' ? 'president' :
+                      dbRoom.categoryId === 'cat-3' ? 'deluxe' :
+                      dbRoom.categoryId === 'cat-2' ? 'indochine-suite' : 'deluxe',
+            view: 'pho-co',
+            viewLabel: `Tầng ${dbRoom.floor} - View thoáng`,
+            tub: 'french',
+            tubLabel: 'Bồn tắm cao cấp',
+            floor: `Tầng ${dbRoom.floor}`,
+            rating: 4.9,
+            reviewsCount: 128,
+            status: {
+              type: dbRoom.usageStatus === 'TRONG' ? 'available' : 'popular',
+              text: dbRoom.usageStatus === 'TRONG' ? 'Còn phòng trống' : 'Đang sử dụng',
+              badgeColor: 'bg-emerald-800 text-white',
+              availableCount: dbRoom.usageStatus === 'TRONG' ? 1 : 0,
+            },
+            // DANH SÁCH ẢNH THỰC TẾ TỪ BẢNG phong_hinh_anh
+            images: dbRoom.images && dbRoom.images.length > 0 ? dbRoom.images.map((img) => ({
+              url: img.url,
+              caption: img.caption || `Ảnh phòng ${dbRoom.roomNumber} - ${dbRoom.categoryName}`
+            })) : [
+              { url: dbRoom.primaryImageUrl, caption: `Ảnh phòng ${dbRoom.roomNumber}` }
+            ],
+            specs: {
+              area: dbRoom.categoryId === 'cat-4' ? 65 : dbRoom.categoryId === 'cat-3' ? 45 : 32,
+              bed: dbRoom.maxCapacity >= 4 ? '2 King Lớn' : '1 King Lớn (1.8m x 2m)',
+              guests: dbRoom.maxCapacity || 2,
+              guestsLabel: `${dbRoom.maxCapacity || 2} Người lớn`,
+              maxGuests: (dbRoom.maxCapacity || 2) + 1,
+              tub: 'Bồn Sứ Pháp Chân Rồng',
+              bathroomCount: 1,
+              smoking: 'Không hút thuốc',
+            },
+            shortDescription: dbRoom.categoryDescription || `Phòng ${dbRoom.categoryName} cao cấp tại Sương Mai.`,
+            fullDescription: dbRoom.categoryDescription || `Phòng ${dbRoom.categoryName} tầng ${dbRoom.floor} khách sạn Sương Mai mang đậm nét kiến trúc sang trọng.`,
+            amenities: dbRoom.amenities && dbRoom.amenities.length > 0 ? dbRoom.amenities : [
+              'Ban công vòm sắt ngắm phố cổ',
+              'Miễn phí trà sen Tây Hồ & Cà phê Nespresso',
+              'Bồn tắm sứ chân rồng kiểu Pháp',
+              'Wifi 6 phủ sóng tốc độ cao',
+            ],
+            amenitiesCategorized: {
+              bedroom: ['Nệm lò xo túi 7 vùng cao cấp', 'Ga trải giường cotton satin 400 sợi'],
+              bathroom: ['Bồn tắm cao cấp', 'Vòi sen nhiệt độ ổn định', 'Máy sấy tóc ion âm'],
+              technology: ['Smart TV 55 inch chuẩn 4K', 'Điều hòa 2 chiều lọc không khí'],
+              services: ['Dọn phòng 2 lần/ngày', 'Miễn phí bữa sáng Buffet']
+            },
+            pricing: {
+              originalPrice: Number(dbRoom.originalPrice) || 1500000,
+              price: Number(dbRoom.price) || 1200000,
+              discountPercent: dbRoom.discountPercent || 20,
+              priceUnit: '/ đêm',
+              includedNote: 'Đã bao gồm bữa sáng Buffet & Thuế phí VAT',
+              depositPercent: 30,
+            },
+            policies: {
+              deposit: 'Đặt cọc 30% giá trị phòng để xác nhận giữ phòng thành công qua PayOS',
+              cancellation: 'Miễn phí hủy phòng trước 48 giờ trước ngày nhận phòng',
+              checkIn: 'Nhận phòng từ 14:00 • Trả phòng trước 12:00 trưa',
+            }
+          };
+          setCurrentRoom(mapped);
+        }
+      }).catch((err) => {
+        console.warn('Lỗi lấy thông tin phòng từ database:', err);
+      }).finally(() => {
+        if (mounted) setIsLoading(false);
+      });
+    } else {
+      setIsLoading(false);
+    }
+    return () => { mounted = false; };
+  }, [roomId]);
 
   // Active image in gallery
   const [activeImageIndex, setActiveImageIndex] = useState(0);
@@ -38,7 +123,7 @@ const RoomDetailPage = () => {
 
   // Modals & Prototype Toggles
   const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [hasConnectionError, setHasConnectionError] = useState(false);
 
   // Calculate nights
@@ -86,6 +171,14 @@ const RoomDetailPage = () => {
 
   if (isLoading) {
     return <RoomDetailSkeleton />;
+  }
+
+  if (!currentRoom) {
+    return (
+      <div className="w-full bg-background min-h-screen pt-28 pb-16 flex flex-col items-center justify-center p-6 text-center">
+        <ConnectionErrorState onRetry={() => navigate('/rooms')} />
+      </div>
+    );
   }
 
   return (
