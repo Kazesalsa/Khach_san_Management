@@ -55,6 +55,16 @@ const copy = {
 
 export default function AuthPage({ mode }) {
   const navigate = useNavigate();
+  // Only allow relative app destinations; avoid open redirects after login.
+  const requestedNext = new URLSearchParams(window.location.search).get('next');
+  const parsedNext = requestedNext?.startsWith('/') && !requestedNext.startsWith('//')
+    && !requestedNext.includes('\\')
+    && !Array.from(requestedNext).some((character) => character.charCodeAt(0) < 32 || character.charCodeAt(0) === 127)
+    ? new URL(requestedNext, window.location.origin)
+    : null;
+  const safeNext = parsedNext?.origin === window.location.origin
+    ? parsedNext.pathname + parsedNext.search + parsedNext.hash
+    : null;
   const c = copy[mode];
   const reduce = useReducedMotion();
   const [values, setValues] = useState({
@@ -146,7 +156,7 @@ export default function AuthPage({ mode }) {
           NHAN_VIEN_BUONG: '/admin/housekeeping',
         };
 
-        navigate(dashboardPaths[profile.role] ?? '/', { replace: true });
+        navigate(safeNext ?? (dashboardPaths[profile.role] ?? '/'), { replace: true });
 
         setValues((v) => ({
           ...v,
@@ -173,7 +183,12 @@ export default function AuthPage({ mode }) {
           values.confirm
         );
 
-        navigate("/dang-nhap", { replace: true });
+        navigate(
+          safeNext
+            ? `/dang-nhap?next=${encodeURIComponent(safeNext)}`
+            : "/dang-nhap",
+          { replace: true }
+        );
         return;
       }
     } catch (error) {
@@ -497,7 +512,7 @@ export default function AuthPage({ mode }) {
             <p className="mt-6 text-center text-xs leading-6 text-text-secondary">
               {c.other}{" "}
               <Link
-                to={c.to}
+                to={safeNext ? `${c.to}?next=${encodeURIComponent(safeNext)}` : c.to}
                 className="inline-flex min-h-11 items-center font-bold text-primary transition-colors hover:text-accent"
               >
                 {c.link}
