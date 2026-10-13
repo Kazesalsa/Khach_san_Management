@@ -112,9 +112,9 @@ CREATE TABLE IF NOT EXISTS khach_hang (
     id VARCHAR(36) PRIMARY KEY,
     tai_khoan_id VARCHAR(36) UNIQUE,
     ho_ten VARCHAR(100) NOT NULL,
-    so_dien_thoai VARCHAR(15) UNIQUE NOT NULL,
+    so_dien_thoai VARCHAR(15) UNIQUE,
     cccd_ho_chieu VARCHAR(20) UNIQUE,
-    email VARCHAR(150),
+    email VARCHAR(150) NOT NULL,
     so_thich_phong VARCHAR(255),
     ngay_tao TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (tai_khoan_id) REFERENCES tai_khoan(id) ON DELETE SET NULL

@@ -19,13 +19,13 @@ public class KhachHang {
     @Column(name = "ho_ten", nullable = false, length = 100)
     private String hoTen;
 
-    @Column(name = "so_dien_thoai", unique = true, nullable = false, length = 15)
+    @Column(name = "so_dien_thoai", unique = true, length = 15)
     private String soDienThoai;
 
     @Column(name = "cccd_ho_chieu", unique = true, length = 20)
     private String cccdHoChieu;
 
-    @Column(name = "email", length = 150)
+    @Column(name = "email", nullable = false, length = 150)
     private String email;
 
     @Column(name = "so_thich_phong")
