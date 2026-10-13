@@ -97,10 +97,12 @@ export default function RevenueDashboardPage() {
   }, [fromDate, toDate, roomCategoryId]);
 
   const [roomCategories, setRoomCategories] = useState([]);
+  const [loadingCategories, setLoadingCategories] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
 
+    setLoadingCategories(true);
     getRoomCategories()
       .then((data) => {
         if (!cancelled) {
@@ -109,6 +111,9 @@ export default function RevenueDashboardPage() {
       })
       .catch((err) => {
         console.error('Không thể tải danh sách loại phòng:', err);
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingCategories(false);
       });
 
     return () => {
@@ -249,9 +254,10 @@ export default function RevenueDashboardPage() {
               <select
                 value={roomCategoryId}
                 onChange={(e) => setRoomCategoryId(e.target.value)}
-                className="bg-white border border-border-custom rounded-xl px-3.5 py-2.5 text-sm text-text-primary focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20"
+                disabled={loadingCategories}
+                className={`bg-white border border-border-custom rounded-xl px-3.5 py-2.5 text-sm text-text-primary focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20 ${loadingCategories ? 'opacity-60 cursor-not-allowed' : ''}`}
               >
-                <option value="">Tất cả loại phòng</option>
+                <option value="">{loadingCategories ? 'Đang tải...' : 'Tất cả loại phòng'}</option>
 
                 {roomCategories.map((category) => (
                   <option key={category.id} value={category.id}>
