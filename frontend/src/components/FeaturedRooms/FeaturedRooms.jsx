@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { getPublicRooms } from '../../services/roomService';
+import { getPublicRooms, DEFAULT_ROOM_IMAGE } from '../../services/roomService';
 
 const FeaturedRooms = () => {
   const [filter, setFilter] = useState("all");
@@ -25,7 +25,7 @@ const FeaturedRooms = () => {
             name: r.name,
             nameEn: `${r.categoryName} Room ${r.roomNumber}`,
             // Lấy ảnh trực tiếp từ bảng phong_hinh_anh
-            image: r.primaryImageUrl || (r.images && r.images[0]?.url) || 'https://images.unsplash.com/photo-1566665797739-1674de7a421a?auto=format&fit=crop&w=800&q=80',
+            image: r.primaryImageUrl || (r.images && r.images[0]?.url) || DEFAULT_ROOM_IMAGE,
             status: {
               text: r.usageStatus === 'TRONG' ? 'Còn phòng trống' : 'Đang có khách',
               color: r.usageStatus === 'TRONG' ? 'bg-success-custom' : 'bg-danger-custom',
@@ -36,7 +36,6 @@ const FeaturedRooms = () => {
             guests: `${r.maxCapacity} Người lớn`,
             amenities: r.amenities?.slice(0, 4) || ['Bồn tắm nằm', 'Smart TV 55"', 'Wifi miễn phí', 'Buffet sáng'],
             vipLabel: { icon: "verified", text: `Phòng ${r.roomNumber} - Hạng ${r.categoryName}` },
-            policy: { icon: "credit_card", text: "Đặt cọc 30% giữ phòng ngay qua PayOS" },
             priceOld: r.originalPrice ? formatVND(r.originalPrice) : null,
             priceNew: formatVND(r.price || 1200000),
             discount: `-${r.discountPercent || 20}%`
@@ -159,11 +158,6 @@ const FeaturedRooms = () => {
                   <div className="bg-surface-alt/60 border border-border-custom p-2.5 rounded-lg flex items-center gap-2 mt-1">
                     <span className="material-symbols-outlined text-accent text-[18px]">{room.vipLabel.icon}</span>
                     <span className="text-xs text-primary font-semibold">{room.vipLabel.text}</span>
-                  </div>
-
-                  <div className="text-text-secondary text-[11px] flex items-center gap-1">
-                    <span className="material-symbols-outlined text-[15px] text-accent">{room.policy.icon}</span>
-                    <span>{room.policy.text}</span>
                   </div>
                 </div>
               </div>

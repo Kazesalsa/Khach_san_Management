@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { getPublicRoomDetail } from '../../services/roomService';
+import { getPublicRoomDetail, DEFAULT_ROOM_IMAGE } from '../../services/roomService';
 import Breadcrumb from '../../components/ui/Breadcrumb';
 import Badge from '../../components/ui/Badge';
 import Button from '../../components/ui/Button';
@@ -32,13 +32,15 @@ const RoomDetailPage = () => {
             roomNumber: dbRoom.roomNumber,
             name: dbRoom.name,
             nameEn: `${dbRoom.categoryName} Room ${dbRoom.roomNumber}`,
-            category: dbRoom.categoryId === 'cat-4' ? 'president' :
+            category: dbRoom.categoryId === 'cat-4' ? 'suite' :
                       dbRoom.categoryId === 'cat-3' ? 'deluxe' :
-                      dbRoom.categoryId === 'cat-2' ? 'indochine-suite' : 'deluxe',
-            view: 'pho-co',
-            viewLabel: `Tầng ${dbRoom.floor} - View thoáng`,
-            tub: 'french',
-            tubLabel: 'Bồn tắm cao cấp',
+                      dbRoom.categoryId === 'cat-2' ? 'superior' : 'standard',
+            view: (parseInt(dbRoom.floor, 10) || 1) >= 4 ? 'ho-guom' : (parseInt(dbRoom.floor, 10) || 1) === 3 ? 'pho-co' : 'san-vuon',
+            viewLabel: (parseInt(dbRoom.floor, 10) || 1) >= 4 ? `Tầng ${dbRoom.floor} - View Hồ Hoàn Kiếm (Panorama)` :
+                       (parseInt(dbRoom.floor, 10) || 1) === 3 ? `Tầng ${dbRoom.floor} - View Phố Cổ Hoàn Kiếm` :
+                       `Tầng ${dbRoom.floor} - View Vườn Trong Yên Tĩnh`,
+            tub: dbRoom.categoryId === 'cat-4' ? 'jacuzzi' : dbRoom.categoryId === 'cat-3' ? 'wood' : 'french',
+            tubLabel: dbRoom.categoryId === 'cat-4' ? 'Bồn sục Jacuzzi massage' : dbRoom.categoryId === 'cat-3' ? 'Bồn gỗ sồi ngâm thảo dược' : 'Bồn tắm sứ Pháp cổ',
             floor: `Tầng ${dbRoom.floor}`,
             rating: 4.9,
             reviewsCount: 128,
@@ -57,11 +59,11 @@ const RoomDetailPage = () => {
             ],
             specs: {
               area: dbRoom.categoryId === 'cat-4' ? 65 : dbRoom.categoryId === 'cat-3' ? 45 : 32,
-              bed: dbRoom.maxCapacity >= 4 ? '2 King Lớn' : '1 King Lớn (1.8m x 2m)',
+              bed: dbRoom.maxCapacity >= 4 ? '2 King Lớn' : dbRoom.maxCapacity >= 3 ? '1 King (2m x 2m2)' : '1 King (1.8m x 2m)',
               guests: dbRoom.maxCapacity || 2,
               guestsLabel: `${dbRoom.maxCapacity || 2} Người lớn`,
               maxGuests: (dbRoom.maxCapacity || 2) + 1,
-              tub: 'Bồn Sứ Pháp Chân Rồng',
+              tub: dbRoom.categoryId === 'cat-4' ? 'Jacuzzi Massage Đôi' : dbRoom.categoryId === 'cat-3' ? 'Bồn Gỗ Sồi Thảo Mộc' : 'Bồn Sứ Pháp Chân Rồng',
               bathroomCount: 1,
               smoking: 'Không hút thuốc',
             },
@@ -88,7 +90,7 @@ const RoomDetailPage = () => {
               depositPercent: 30,
             },
             policies: {
-              deposit: 'Đặt cọc 30% giá trị phòng để xác nhận giữ phòng thành công qua PayOS',
+              deposit: 'Đặt cọc để xác nhận giữ phòng thành công',
               cancellation: 'Miễn phí hủy phòng trước 48 giờ trước ngày nhận phòng',
               checkIn: 'Nhận phòng từ 14:00 • Trả phòng trước 12:00 trưa',
             }
@@ -146,15 +148,6 @@ const RoomDetailPage = () => {
 
   const formatVND = (num) => new Intl.NumberFormat('vi-VN').format(num) + '₫';
 
-  // Prototype toggle helper
-  const handleSimulateReload = () => {
-    setIsLoading(true);
-    setHasConnectionError(false);
-    setTimeout(() => {
-      setIsLoading(false);
-    }, 600);
-  };
-
   if (hasConnectionError) {
     return (
       <div className="max-w-[1360px] mx-auto px-4 lg:px-8 py-12">
@@ -184,37 +177,15 @@ const RoomDetailPage = () => {
   return (
     <div className="w-full bg-background min-h-screen pb-24 pt-20">
       
-      {/* Top Meta Bar: Breadcrumb & Prototype Toolbar */}
+      {/* Top Meta Bar: Breadcrumb */}
       <div className="bg-surface border-b border-border-custom shadow-sm sticky top-20 z-30">
-        <div className="max-w-[1360px] mx-auto px-4 lg:px-8 flex flex-col sm:flex-row sm:items-center justify-between gap-2 py-1">
+        <div className="max-w-[1360px] mx-auto px-4 lg:px-8 py-2.5">
           <Breadcrumb
             items={[
               { label: 'Phòng & Bảng giá', to: '/rooms' },
               { label: currentRoom.name },
             ]}
           />
-
-          {/* Prototype Controls: Reload / Test error */}
-          <div className="flex items-center gap-2 text-xs py-1">
-            <button
-              type="button"
-              onClick={handleSimulateReload}
-              className="text-text-secondary hover:text-primary transition-colors flex items-center gap-1 font-medium bg-surface-alt px-2.5 py-1 rounded"
-              title="Mô phỏng Skeleton Loading"
-            >
-              <span className="material-symbols-outlined text-[15px]">refresh</span>
-              <span>Tải lại</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setHasConnectionError(true)}
-              className="text-text-secondary hover:text-danger-custom transition-colors flex items-center gap-1 font-medium bg-surface-alt px-2.5 py-1 rounded"
-              title="Mô phỏng Lỗi kết nối mạng"
-            >
-              <span className="material-symbols-outlined text-[15px]">wifi_off</span>
-              <span>Test Lỗi kết nối</span>
-            </button>
-          </div>
         </div>
       </div>
 
@@ -313,9 +284,13 @@ const RoomDetailPage = () => {
             className="lg:col-span-8 relative aspect-[16/10] rounded-2xl overflow-hidden shadow-md border border-border-custom cursor-pointer group"
           >
             <img
-              src={currentRoom.images[activeImageIndex]?.url}
+              src={currentRoom.images[activeImageIndex]?.url || DEFAULT_ROOM_IMAGE}
               alt={currentRoom.name}
               className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+              onError={(e) => {
+                e.currentTarget.onerror = null;
+                e.currentTarget.src = DEFAULT_ROOM_IMAGE;
+              }}
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-80" />
             
@@ -346,6 +321,10 @@ const RoomDetailPage = () => {
                   src={img.url}
                   alt={img.caption}
                   className="w-full h-full object-cover"
+                  onError={(e) => {
+                    e.currentTarget.onerror = null;
+                    e.currentTarget.src = DEFAULT_ROOM_IMAGE;
+                  }}
                 />
               </div>
             ))}
@@ -805,9 +784,13 @@ const RoomDetailPage = () => {
 
             <div className="relative flex-1 flex items-center justify-center overflow-hidden">
               <img
-                src={currentRoom.images[activeImageIndex]?.url}
-                alt={currentRoom.images[activeImageIndex]?.caption}
+                src={currentRoom.images[activeImageIndex]?.url || DEFAULT_ROOM_IMAGE}
+                alt={currentRoom.images[activeImageIndex]?.caption || currentRoom.name}
                 className="max-h-[75vh] max-w-[90vw] object-contain rounded-xl shadow-2xl"
+                onError={(e) => {
+                  e.currentTarget.onerror = null;
+                  e.currentTarget.src = DEFAULT_ROOM_IMAGE;
+                }}
               />
 
               {/* Prev / Next buttons */}

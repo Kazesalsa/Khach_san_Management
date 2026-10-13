@@ -127,10 +127,10 @@ const RoomSearchBar = () => {
                   onChange={(e) => setCategory(e.target.value)}
                 >
                   <option value="all">Tất cả hạng phòng</option>
-                  <option value="deluxe">Deluxe Ban công</option>
-                  <option value="premier">Premier Suite</option>
-                  <option value="executive">Executive King</option>
-                  <option value="family">Family Duplex</option>
+                  <option value="standard">Tiêu chuẩn (Standard)</option>
+                  <option value="superior">Cao cấp (Superior)</option>
+                  <option value="deluxe">Phòng Deluxe</option>
+                  <option value="suite">Suite Tổng thống</option>
                 </select>
               </div>
             </div>
@@ -152,8 +152,6 @@ const RoomSearchBar = () => {
                 <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-success-custom"></span>
               </span>
               <span className="font-semibold text-primary tracking-wide">Kiểm tra phòng theo thời gian thực</span>
-              <span className="text-border-custom">•</span>
-              <span className="text-text-secondary">Không phát sinh phụ phí ẩn</span>
             </div>
           </div>
         </form>

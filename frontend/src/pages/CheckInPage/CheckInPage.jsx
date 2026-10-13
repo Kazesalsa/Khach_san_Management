@@ -61,7 +61,7 @@ function BookingCard({ booking, onCheckIn, busy, disabled }) {
         <div className="flex items-start justify-between gap-3">
           <div>
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="font-headline text-lg font-bold text-primary">
+              <span className="text-lg font-bold text-primary">
                 Đặt phòng {booking.bookingCode}
               </span>
               <Badge variant={done ? 'success' : 'default'} dot>
@@ -112,32 +112,26 @@ function BookingCard({ booking, onCheckIn, busy, disabled }) {
 
         {/* Cảnh báo phòng chưa dọn */}
         {rs.warn && !done && (
-          <div className={`flex items-center gap-2.5 p-3 rounded-xl border text-xs font-semibold ${
+          <div className={`p-3 rounded-xl border text-xs font-semibold ${
             roomStatus === 'dirty'
               ? 'bg-rose-50 border-rose-200 text-danger-custom'
               : 'bg-amber-50 border-amber-200 text-amber-700'
           }`}>
-            <span className="material-symbols-outlined text-[18px] shrink-0">{rs.icon}</span>
             <span>{rs.label} — Cần thông báo cho bộ phận buồng phòng trước khi check-in</span>
           </div>
         )}
 
         {/* Thông tin khách */}
-        <div className="flex items-center gap-3 p-3 bg-background rounded-xl border border-border-custom/60">
-          <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-            <span className="material-symbols-outlined text-primary text-[20px]">person</span>
-          </div>
-          <div className="min-w-0">
-            <p className="font-bold text-primary truncate">{booking.guestName}</p>
-            <p className="text-[11px] text-text-secondary">{booking.phone} · {booking.email}</p>
-            <p className="text-[11px] text-text-secondary">
-              Tổng số khách:{' '}
-              {(booking.rooms ?? []).reduce(
-                (total, room) => total + (Number(room.guestCount) || 0),
-                0
-              )}
-            </p>
-          </div>
+        <div className="p-3 bg-background rounded-xl border border-border-custom/60">
+          <p className="font-bold text-primary truncate">{booking.guestName}</p>
+          <p className="text-xs text-text-secondary mt-0.5">{booking.phone} · {booking.email}</p>
+          <p className="text-xs text-text-secondary mt-0.5">
+            Tổng số khách:{' '}
+            {(booking.rooms ?? []).reduce(
+              (total, room) => total + (Number(room.guestCount) || 0),
+              0
+            )}
+          </p>
         </div>
 
         {/* Chi tiết đặt phòng */}
@@ -145,24 +139,19 @@ function BookingCard({ booking, onCheckIn, busy, disabled }) {
           <div className="grid grid-cols-2 gap-2 text-xs">
             {[
               {
-                icon: 'payments',
                 label: 'Tổng tiền dự kiến',
                 value: formatVND(booking.estimatedTotal ?? 0),
               },
               {
-                icon: 'account_balance_wallet',
                 label: 'Tiền cọc yêu cầu',
                 value: formatVND(booking.requiredDeposit ?? 0),
               },
-            ].map(({ icon, label, value }) => (
+            ].map(({ label, value }) => (
               <div
                 key={label}
-                className="flex flex-col gap-1 p-2.5 bg-surface-alt/50 rounded-xl"
+                className="flex flex-col gap-0.5 p-2.5 bg-surface-alt/50 rounded-xl"
               >
-                <span className="flex items-center gap-1 text-[10px] uppercase tracking-wider text-text-secondary font-semibold">
-                  <span className="material-symbols-outlined text-accent text-[13px]">
-                    {icon}
-                  </span>
+                <span className="text-xs text-text-secondary font-medium">
                   {label}
                 </span>
                 <span className="font-bold text-primary">{value}</span>
@@ -196,8 +185,7 @@ function BookingCard({ booking, onCheckIn, busy, disabled }) {
 
         {/* Ghi chú */}
         {booking.note && (
-          <div className="flex items-start gap-2 p-3 bg-accent/5 border border-accent/20 rounded-xl text-xs text-text-secondary">
-            <span className="material-symbols-outlined text-accent text-[16px] mt-0.5 shrink-0">edit_note</span>
+          <div className="p-3 bg-accent/5 border border-accent/20 rounded-xl text-xs text-text-secondary">
             <span>{booking.note}</span>
           </div>
         )}
@@ -215,7 +203,7 @@ function BookingCard({ booking, onCheckIn, busy, disabled }) {
           )}
 
           {done && (
-            <Badge variant="success" icon="check_circle">
+            <Badge variant="success">
               {booking.actualCheckInTime
                 ? `Check-in lúc ${new Date(
                     booking.actualCheckInTime
@@ -234,7 +222,6 @@ function BookingCard({ booking, onCheckIn, busy, disabled }) {
             variant="secondary"
             size="md"
             fullWidth
-            iconLeft={busy ? undefined : 'how_to_reg'}
             isLoading={busy}
             isDisabled={disabled || roomStatus !== 'clean' || booking.bookingStatus !== 'DA_DAT'}
             onClick={() => onCheckIn(booking)}
@@ -374,9 +361,9 @@ export default function CheckInPage() {
         <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6">
           <div className="flex items-start justify-between gap-4">
             <div>
-              <p className="text-accent text-xs font-bold uppercase tracking-[0.2em]">Sương Mai Hotel</p>
-              <h1 className="font-headline text-2xl sm:text-3xl font-bold mt-1">Tiếp Nhận Check-in</h1>
-              <p className="text-text-on-dark/70 text-sm mt-2">Tìm đặt phòng và xác nhận check-in cho khách</p>
+              <p className="text-accent text-xs font-semibold">Sương Mai Hotel</p>
+              <h1 className="text-2xl sm:text-3xl font-bold mt-1">Tiếp Nhận Check-in</h1>
+              <p className="text-text-on-dark/70 text-sm mt-1">Tìm đặt phòng và xác nhận check-in cho khách</p>
             </div>
             <Link to="/" className="inline-flex items-center gap-2 rounded-xl border border-white/20 px-3 sm:px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-white/10 shrink-0">
               <span className="material-symbols-outlined text-[18px]">arrow_back</span>
@@ -391,27 +378,18 @@ export default function CheckInPage() {
         {/* Stat cards */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div className="bg-surface rounded-2xl border border-border-custom shadow-sm p-5">
-            <div className="flex items-center gap-2 mb-1">
-              <span className="material-symbols-outlined text-accent text-[20px]">pending_actions</span>
-              <p className="text-xs uppercase tracking-wider text-text-secondary">Chờ check-in</p>
-            </div>
-            <p className="font-headline text-3xl font-bold text-primary">{pendingCount}</p>
+            <p className="text-xs text-text-secondary font-medium">Chờ check-in</p>
+            <p className="text-3xl font-bold text-primary mt-1">{pendingCount}</p>
             <p className="text-xs text-text-secondary mt-1">đặt phòng đang chờ</p>
           </div>
           <div className="bg-surface rounded-2xl border border-emerald-200 shadow-sm p-5">
-            <div className="flex items-center gap-2 mb-1">
-              <span className="material-symbols-outlined text-emerald-600 text-[20px]">how_to_reg</span>
-              <p className="text-xs uppercase tracking-wider text-text-secondary">Sẵn sàng check-in</p>
-            </div>
-            <p className="font-headline text-3xl font-bold text-success-custom">{readyCount}</p>
+            <p className="text-xs text-text-secondary font-medium">Sẵn sàng check-in</p>
+            <p className="text-3xl font-bold text-success-custom mt-1">{readyCount}</p>
             <p className="text-xs text-text-secondary mt-1">đặt phòng đủ điều kiện</p>
           </div>
           <div className="bg-surface rounded-2xl border border-amber-200 shadow-sm p-5">
-            <div className="flex items-center gap-2 mb-1">
-              <span className="material-symbols-outlined text-amber-600 text-[20px]">warning</span>
-              <p className="text-xs uppercase tracking-wider text-text-secondary">Phòng cần lưu ý</p>
-            </div>
-            <p className="font-headline text-3xl font-bold text-amber-600">{warnCount}</p>
+            <p className="text-xs text-text-secondary font-medium">Phòng cần lưu ý</p>
+            <p className="text-3xl font-bold text-amber-600 mt-1">{warnCount}</p>
             <p className="text-xs text-text-secondary mt-1">phòng chưa sẵn sàng</p>
           </div>
         </div>
