@@ -163,9 +163,9 @@ class CheckoutServiceTest {
     @DisplayName("Check-out thành công khi đã thanh toán đủ: đổi trạng thái phòng sang TRONG và CHUA_DON")
     void checkout_whenPaidInFull_shouldSucceedAndUpdateStatus() {
         when(bookingRepository.findByBookingCode("BOOK001")).thenReturn(Optional.of(sampleBooking));
-        when(suDungDichVuRepository.sumServiceFeeByBooking("b-01")).thenReturn(BigDecimal.ZERO);
-        // Đã trả 2.000.000 / 2.000.000
-        when(thanhToanRepository.sumPaidByBooking("b-01")).thenReturn(new BigDecimal("2000000"));
+        sampleInvoice.setStatus(TrangThaiHoaDon.DA_THANH_TOAN);
+        when(hoaDonRepository.findByBookingId("b-01"))
+                .thenReturn(Optional.of(sampleInvoice));
         when(nhanVienRepository.findByTaiKhoan_TenDangNhap("letan1")).thenReturn(Optional.of(sampleStaff));
         when(bookingDetailRepository.findByBookingId("b-01")).thenReturn(List.of(sampleDetail));
 
@@ -204,13 +204,13 @@ class CheckoutServiceTest {
     @DisplayName("Check-out thất bại khi chưa thanh toán đủ: ném ngoại lệ UnpaidBookingException")
     void checkout_whenUnpaid_shouldThrowUnpaidBookingException() {
         when(bookingRepository.findByBookingCode("BOOK001")).thenReturn(Optional.of(sampleBooking));
-        when(suDungDichVuRepository.sumServiceFeeByBooking("b-01")).thenReturn(BigDecimal.ZERO);
-        // Chỉ mới cọc 1.000.000 / 2.000.000
-        when(thanhToanRepository.sumPaidByBooking("b-01")).thenReturn(new BigDecimal("1000000"));
+        sampleInvoice.setStatus(TrangThaiHoaDon.CHO_THANH_TOAN);
+        when(hoaDonRepository.findByBookingId("b-01"))
+                .thenReturn(Optional.of(sampleInvoice));
 
         assertThatThrownBy(() -> checkoutService.checkout("BOOK001", "letan1"))
                 .isInstanceOf(UnpaidBookingException.class)
-                .hasMessageContaining("chưa thanh toán");
+                .hasMessageContaining("chưa được thanh toán");
 
         verify(bookingRepository, never()).save(any());
         verify(roomRepository, never()).save(any());
@@ -256,8 +256,9 @@ class CheckoutServiceTest {
     @DisplayName("Batch check-out thành công cho đoàn khách nhiều phòng")
     void batchCheckout_whenValidList_shouldProcessAll() {
         when(bookingRepository.findByBookingCode("BOOK001")).thenReturn(Optional.of(sampleBooking));
-        when(suDungDichVuRepository.sumServiceFeeByBooking("b-01")).thenReturn(BigDecimal.ZERO);
-        when(thanhToanRepository.sumPaidByBooking("b-01")).thenReturn(new BigDecimal("2000000"));
+        sampleInvoice.setStatus(TrangThaiHoaDon.DA_THANH_TOAN);
+        when(hoaDonRepository.findByBookingId("b-01"))
+                .thenReturn(Optional.of(sampleInvoice));
         when(nhanVienRepository.findByTaiKhoan_TenDangNhap("letan1")).thenReturn(Optional.of(sampleStaff));
         when(bookingDetailRepository.findByBookingId("b-01")).thenReturn(List.of(sampleDetail));
 
@@ -280,8 +281,9 @@ class CheckoutServiceTest {
     void batchCheckout_updatesRoomStatus() {
         // Arrange same mocks as batch checkout test
         when(bookingRepository.findByBookingCode("BOOK001")).thenReturn(Optional.of(sampleBooking));
-        when(suDungDichVuRepository.sumServiceFeeByBooking("b-01")).thenReturn(BigDecimal.ZERO);
-        when(thanhToanRepository.sumPaidByBooking("b-01")).thenReturn(new BigDecimal("2000000"));
+        sampleInvoice.setStatus(TrangThaiHoaDon.DA_THANH_TOAN);
+        when(hoaDonRepository.findByBookingId("b-01"))
+                .thenReturn(Optional.of(sampleInvoice));
         when(nhanVienRepository.findByTaiKhoan_TenDangNhap("letan1")).thenReturn(Optional.of(sampleStaff));
         when(bookingDetailRepository.findByBookingId("b-01")).thenReturn(List.of(sampleDetail));
 
