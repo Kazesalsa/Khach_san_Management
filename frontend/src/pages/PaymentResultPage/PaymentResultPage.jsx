@@ -29,52 +29,28 @@ export default function PaymentResultPage() {
 
     const verifyStatus = async () => {
       if (isCancelled) {
-        setLoading(false);
-        addToast({
-          title: 'Đã hủy thanh toán',
-          message: 'Quý khách đã hủy giao dịch trên cổng thanh toán PayOS.',
-          type: 'warning',
-          duration: 4000,
-        });
+        navigate(`/?payment=cancel&bookingCode=${bookingCodeParam || ''}`, { replace: true });
         return;
       }
 
       if (orderCode) {
         try {
           const res = await getPaymentStatus(orderCode);
-          setPaymentInfo(res);
           if (res.status === 'PAID') {
-            addToast({
-              title: 'Thanh toán thành công!',
-              message: `Đã xác nhận giao dịch qua PayOS cho mã đặt phòng ${res.bookingCode || bookingCodeParam}.`,
-              type: 'success',
-              duration: 5000,
-            });
+            navigate(`/?payment=success&bookingCode=${res.bookingCode || bookingCodeParam || ''}&orderCode=${orderCode}`, { replace: true });
+            return;
           }
+          setPaymentInfo(res);
         } catch (err) {
           console.warn('Lỗi kiểm tra trạng thái thanh toán từ backend:', err);
-          // Fallback dựa trên params từ PayOS
           if (paramStatus === 'PAID' || paramCode === '00') {
-            setPaymentInfo({
-              status: 'PAID',
-              orderCode: orderCode,
-              bookingCode: bookingCodeParam,
-              message: 'Thanh toán thành công qua PayOS',
-            });
-            addToast({
-              title: 'Thanh toán thành công!',
-              message: 'Giao dịch qua PayOS đã hoàn tất thành công.',
-              type: 'success',
-              duration: 5000,
-            });
+            navigate(`/?payment=success&bookingCode=${bookingCodeParam || ''}&orderCode=${orderCode}`, { replace: true });
+            return;
           }
         }
       } else if (paramStatus === 'PAID' || paramCode === '00') {
-        setPaymentInfo({
-          status: 'PAID',
-          bookingCode: bookingCodeParam,
-          message: 'Thanh toán thành công qua PayOS',
-        });
+        navigate(`/?payment=success&bookingCode=${bookingCodeParam || ''}`, { replace: true });
+        return;
       }
       setLoading(false);
     };
