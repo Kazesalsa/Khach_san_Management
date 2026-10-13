@@ -1,41 +1,157 @@
+import axios from 'axios';
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import Button from '../../components/ui/Button';
-import Badge from '../../components/ui/Badge';
-
-// Dữ liệu mẫu — sau này thay bằng API call
-const INITIAL_ROOMS = [
-  { id: 1, number: '101', type: 'Standard', floor: 1, status: 'dirty' },
-  { id: 2, number: '102', type: 'Standard', floor: 1, status: 'dirty' },
-  { id: 3, number: '201', type: 'Deluxe', floor: 2, status: 'dirty' },
-  { id: 4, number: '202', type: 'Deluxe', floor: 2, status: 'dirty' },
-  { id: 5, number: '301', type: 'Suite', floor: 3, status: 'dirty' },
-  { id: 6, number: '103', type: 'Standard', floor: 1, status: 'dirty' },
-  { id: 7, number: '203', type: 'Deluxe', floor: 2, status: 'dirty' },
-  { id: 8, number: '302', type: 'Suite', floor: 3, status: 'dirty' },
-];
 
 function HousekeepingDashboardPage() {
-  const [rooms, setRooms] = useState(INITIAL_ROOMS);
+  const [roomCodeInput, setRoomCodeInput] = useState('');
+  const [rooms, setRooms] = useState([]);
+  const [loadingRooms, setLoadingRooms] = useState(true);
+  const [roomsError, setRoomsError] = useState('');
+  const [updating, setUpdating] = useState(false);
+  const [apiFeedback, setApiFeedback] = useState({
+    type: '',
+    message: '',
+  });
 
   useEffect(() => {
     document.title = 'Dashboard Buồng Phòng | Sương Mai Hotel';
+
+    const loadRooms = async () => {
+      const token =
+        localStorage.getItem('authToken') ||
+        sessionStorage.getItem('authToken');
+
+      if (!token) {
+        setRoomsError('Vui lòng đăng nhập để xem danh sách phòng.');
+        setLoadingRooms(false);
+        return;
+      }
+
+      try {
+        const response = await axios.get('/api/rooms', {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        if (!Array.isArray(response.data)) {
+          throw new Error('Dữ liệu danh sách phòng không hợp lệ');
+        }
+
+        setRooms(response.data);
+        setRoomsError('');
+      } catch (err) {
+        console.error('Không thể tải danh sách phòng:', err);
+
+        setRoomsError(
+          'Không thể tải danh sách phòng. Vui lòng thử lại sau.'
+        );
+      } finally {
+        setLoadingRooms(false);
+      }
+    };
+
+    loadRooms();
   }, []);
 
-  const dirtyRooms = rooms.filter((r) => r.status === 'dirty');
-  const cleanRooms = rooms.filter((r) => r.status === 'clean');
+  // Đánh dấu phòng đã dọn xong bằng API thật
+  const markRoomCleanByCode = async (selectedCode) => {
+  const code = (selectedCode ?? roomCodeInput).trim();
 
-  const handleMarkClean = (id) => {
-    setRooms((prev) =>
-      prev.map((r) => (r.id === id ? { ...r, status: 'clean' } : r))
-    );
+    if (!code) {
+      setApiFeedback({
+        type: 'error',
+        message: 'Vui lòng nhập mã phòng.',
+      });
+      return;
+    }
+
+    const token =
+      localStorage.getItem('authToken') ||
+      sessionStorage.getItem('authToken');
+
+    if (!token) {
+      setApiFeedback({
+        type: 'error',
+        message: 'Vui lòng đăng nhập bằng tài khoản nhân viên buồng phòng.',
+      });
+      return;
+    }
+
+    setUpdating(true);
+    setApiFeedback({ type: '', message: '' });
+
+    try {
+      const response = await axios.patch(
+        `/api/rooms/${encodeURIComponent(code)}/cleaning-status`,
+        null,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      setApiFeedback({
+        type: 'success',
+        message: `Đã đánh dấu thành công cho phòng ${response.data.roomNumber}`,
+      });
+
+      setRoomCodeInput('');
+      setRooms((prev) =>
+        prev.map((room) =>
+          room.roomCode === code
+            ? { ...room, cleaningStatus: 'DA_DON_XONG' }
+            : room
+        )
+      );
+
+      // Tải lại danh sách phòng sau khi PATCH thành công
+      try {
+        const roomsResponse = await axios.get('/api/rooms', {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        if (!Array.isArray(roomsResponse.data)) {
+          throw new Error('Dữ liệu danh sách phòng không hợp lệ');
+        }
+
+        setRooms(roomsResponse.data);
+        setRoomsError('');
+      } catch (refreshError) {
+        console.error('Không thể tải lại danh sách phòng:', refreshError);
+        // Giữ trạng thái đã cập nhật ở trên nếu GET tạm thời lỗi.
+      }
+
+    } catch (err) {
+      const status = err.response?.status;
+
+      let message = 'Không thể cập nhật trạng thái phòng. Vui lòng thử lại sau.';
+
+      if (status === 404) {
+        message = 'Phòng không tồn tại';
+      } else if (status === 400) {
+        message = 'Phòng này đã được đánh dấu dọn xong';
+      } else if (status === 401) {
+        message = 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.';
+      } else if (status === 403) {
+        message = 'Bạn không có quyền thực hiện thao tác này.';
+      } else if (!err.response) {
+        message = 'Không thể kết nối đến máy chủ. Vui lòng thử lại.';
+      }
+
+      setApiFeedback({ type: 'error', message });
+    } finally {
+      setUpdating(false);
+    }
   };
 
-  const handleMarkDirty = (id) => {
-    setRooms((prev) =>
-      prev.map((r) => (r.id === id ? { ...r, status: 'dirty' } : r))
-    );
-  };
+  const uncleanedRooms = rooms.filter(
+    (room) => room.cleaningStatus === 'CHUA_DON'
+  );
 
   return (
     <div className="min-h-screen bg-background">
@@ -66,193 +182,115 @@ function HousekeepingDashboardPage() {
       </header>
 
       <main className="max-w-6xl mx-auto px-4 sm:px-6 py-8 space-y-8">
-        {/* Stat cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <div className="bg-surface rounded-2xl border border-border-custom shadow-sm p-6">
-            <p className="text-xs uppercase tracking-wider text-text-secondary">
-              Tổng phòng
-            </p>
-            <p className="font-headline text-3xl font-bold text-primary mt-1">
-              {rooms.length}
-            </p>
-          </div>
-          <div className="bg-surface rounded-2xl border border-border-custom shadow-sm p-6">
-            <p className="text-xs uppercase tracking-wider text-text-secondary">
-              Chưa dọn
-            </p>
-            <p className="font-headline text-3xl font-bold text-danger-custom mt-1">
-              {dirtyRooms.length}
-            </p>
-          </div>
-          <div className="bg-surface rounded-2xl border border-border-custom shadow-sm p-6">
-            <p className="text-xs uppercase tracking-wider text-text-secondary">
-              Đã dọn xong
-            </p>
-            <p className="font-headline text-3xl font-bold text-success-custom mt-1">
-              {cleanRooms.length}
-            </p>
-          </div>
-        </div>
+        {/* Đánh dấu phòng đã dọn bằng API */}
+        <section className="bg-surface rounded-2xl border border-border-custom shadow-sm p-6">
+          <h2 className="font-headline text-xl font-bold text-primary mb-4">
+            Đánh dấu phòng đã dọn xong
+          </h2>
 
-        {/* Danh sách phòng chưa dọn */}
-        <section>
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
-            <div>
-              <h2 className="font-headline text-2xl font-bold text-primary">
-                Phòng Chưa Dọn
-              </h2>
-              <p className="text-sm text-text-secondary mt-1">
-                {dirtyRooms.length} phòng cần được dọn dẹp
-              </p>
-            </div>
-          </div>
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (!updating) markRoomCleanByCode();
+            }}
+            className="flex flex-col sm:flex-row gap-3"
+          >
+            <input
+              type="text"
+              value={roomCodeInput}
+              onChange={(e) => setRoomCodeInput(e.target.value)}
+              placeholder="Nhập mã phòng..."
+              aria-label="Mã phòng cần đánh dấu"
+              className="flex-1 bg-background border border-border-custom rounded-xl px-4 py-3 text-sm text-text-primary focus:outline-none focus:border-accent"
+            />
 
-          {dirtyRooms.length === 0 ? (
-            <div className="bg-surface rounded-2xl border border-border-custom shadow-sm p-12 text-center">
-              <span className="material-symbols-outlined text-5xl text-success-custom">
-                check_circle
-              </span>
-              <p className="font-headline text-xl font-bold text-primary mt-3">
-                Tất cả phòng đã được dọn sạch!
-              </p>
-              <p className="text-text-secondary text-sm mt-1">
-                Không còn phòng nào cần dọn dẹp.
-              </p>
-            </div>
-          ) : (
-            <div className="bg-surface rounded-2xl border border-border-custom shadow-sm overflow-hidden">
-              <div className="overflow-x-auto">
-                <table className="w-full min-w-[520px]">
-                  <thead className="bg-surface-alt/60">
-                    <tr className="text-left">
-                      <th className="px-6 py-4 text-xs uppercase tracking-wider text-text-secondary">
-                        Số phòng
-                      </th>
-                      <th className="px-6 py-4 text-xs uppercase tracking-wider text-text-secondary">
-                        Loại phòng
-                      </th>
-                      <th className="px-6 py-4 text-xs uppercase tracking-wider text-text-secondary">
-                        Tầng
-                      </th>
-                      <th className="px-6 py-4 text-xs uppercase tracking-wider text-text-secondary">
-                        Trạng thái
-                      </th>
-                      <th className="px-6 py-4 text-xs uppercase tracking-wider text-text-secondary">
-                        Hành động
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-border-custom">
-                    {dirtyRooms.map((room) => (
-                      <tr
-                        key={room.id}
-                        className="hover:bg-background/70 transition-colors"
-                      >
-                        <td className="px-6 py-4 font-bold text-primary">
-                          {room.number}
-                        </td>
-                        <td className="px-6 py-4 text-text-primary">
-                          {room.type}
-                        </td>
-                        <td className="px-6 py-4 text-text-secondary">
-                          Tầng {room.floor}
-                        </td>
-                        <td className="px-6 py-4">
-                          <Badge variant="danger" dot>
-                            Chưa dọn
-                          </Badge>
-                        </td>
-                        <td className="px-6 py-4">
-                          <Button
-                            variant="secondary"
-                            size="sm"
-                            iconLeft="check_circle"
-                            onClick={() => handleMarkClean(room.id)}
-                          >
-                            Đã dọn xong
-                          </Button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+            <Button
+              type="submit"
+              variant="secondary"
+              iconLeft="check_circle"
+              isLoading={updating}
+              isDisabled={updating}
+            >
+              {updating ? 'Đang cập nhật...' : 'Đã dọn xong'}
+            </Button>
+          </form>
+
+          {apiFeedback.message && (
+            <div
+              role="alert"
+              className={`mt-4 rounded-xl border px-4 py-3 text-sm ${
+                apiFeedback.type === 'success'
+                  ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
+                  : 'bg-rose-50 border-rose-200 text-rose-800'
+              }`}
+            >
+              {apiFeedback.message}
             </div>
           )}
         </section>
 
-        {/* Danh sách phòng đã dọn */}
-        {cleanRooms.length > 0 && (
-          <section>
-            <div className="mb-4">
-              <h2 className="font-headline text-2xl font-bold text-primary">
-                Phòng Đã Dọn Xong
-              </h2>
-              <p className="text-sm text-text-secondary mt-1">
-                {cleanRooms.length} phòng đã hoàn thành
-              </p>
-            </div>
+        {/* Danh sách phòng cần dọn từ API */}
+        <section className="bg-surface rounded-2xl border border-border-custom shadow-sm p-6">
+          <h2 className="font-headline text-xl font-bold text-primary mb-4">
+            Danh sách phòng cần dọn
+          </h2>
 
-            <div className="bg-surface rounded-2xl border border-border-custom shadow-sm overflow-hidden">
-              <div className="overflow-x-auto">
-                <table className="w-full min-w-[520px]">
-                  <thead className="bg-surface-alt/60">
-                    <tr className="text-left">
-                      <th className="px-6 py-4 text-xs uppercase tracking-wider text-text-secondary">
-                        Số phòng
-                      </th>
-                      <th className="px-6 py-4 text-xs uppercase tracking-wider text-text-secondary">
-                        Loại phòng
-                      </th>
-                      <th className="px-6 py-4 text-xs uppercase tracking-wider text-text-secondary">
-                        Tầng
-                      </th>
-                      <th className="px-6 py-4 text-xs uppercase tracking-wider text-text-secondary">
-                        Trạng thái
-                      </th>
-                      <th className="px-6 py-4 text-xs uppercase tracking-wider text-text-secondary">
-                        Hành động
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-border-custom">
-                    {cleanRooms.map((room) => (
-                      <tr
-                        key={room.id}
-                        className="hover:bg-background/70 transition-colors opacity-75"
-                      >
-                        <td className="px-6 py-4 font-bold text-primary">
-                          {room.number}
-                        </td>
-                        <td className="px-6 py-4 text-text-primary">
-                          {room.type}
-                        </td>
-                        <td className="px-6 py-4 text-text-secondary">
-                          Tầng {room.floor}
-                        </td>
-                        <td className="px-6 py-4">
-                          <Badge variant="success" dot>
-                            Đã dọn sạch
-                          </Badge>
-                        </td>
-                        <td className="px-6 py-4">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            iconLeft="undo"
-                            onClick={() => handleMarkDirty(room.id)}
-                          >
-                            Đánh dấu lại
-                          </Button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+          {loadingRooms ? (
+            <p className="text-text-secondary">
+              Đang tải danh sách phòng...
+            </p>
+          ) : roomsError ? (
+            <p role="alert" className="text-red-600">
+              {roomsError}
+            </p>
+          ) : uncleanedRooms.length === 0 ? (
+            <p className="text-text-secondary">
+              Hiện không có phòng nào cần dọn.
+            </p>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {uncleanedRooms.map((room) => (
+                <div
+                  key={room.id}
+                  className="rounded-xl border border-border-custom p-4 space-y-2"
+                >
+                  <h3 className="font-bold text-primary text-lg">
+                    Phòng {room.roomNumber}
+                  </h3>
+
+                  <p className="text-sm text-text-secondary">
+                    Mã phòng: {room.roomCode}
+                  </p>
+
+                  <p className="text-sm text-text-secondary">
+                    Loại phòng: {room.roomType || 'Chưa xác định'}
+                  </p>
+
+                  <p className="text-sm text-text-secondary">
+                    Tầng: {room.floor}
+                  </p>
+
+                  <span className="inline-block rounded-lg bg-amber-100 text-amber-800 px-3 py-1 text-xs font-semibold">
+                    Chưa dọn
+                  </span>
+
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    iconLeft="check_circle"
+                    onClick={() => markRoomCleanByCode(room.roomCode)}
+                    isLoading={updating}
+                    isDisabled={updating}
+                  >
+                    Đã dọn xong
+                  </Button>
+
+                </div>
+              ))}
             </div>
-          </section>
-        )}
+          )}
+        </section>
+
       </main>
     </div>
   );

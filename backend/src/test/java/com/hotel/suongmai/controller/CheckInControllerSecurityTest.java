@@ -2,8 +2,13 @@ package com.hotel.suongmai.controller;
 
 import com.hotel.suongmai.config.SecurityConfig;
 import com.hotel.suongmai.dto.CheckInResponse;
+import com.hotel.suongmai.dto.PendingCheckInBookingResponse;
+import com.hotel.suongmai.dto.PendingCheckInRoomResponse;
+import com.hotel.suongmai.entity.BookingStatus;
+import com.hotel.suongmai.entity.CleaningStatus;
 import com.hotel.suongmai.entity.TaiKhoan;
 import com.hotel.suongmai.entity.TrangThaiTaiKhoan;
+import com.hotel.suongmai.entity.UsageStatus;
 import com.hotel.suongmai.entity.VaiTro;
 import com.hotel.suongmai.exception.BookingNotFoundException;
 import com.hotel.suongmai.exception.CheckInExceptionHandler;
@@ -22,6 +27,8 @@ import org.springframework.context.annotation.Import;
 import org.springframework.dao.DataAccessResourceFailureException;
 import org.springframework.test.web.servlet.MockMvc;
 
+import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -29,6 +36,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -37,6 +45,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class CheckInControllerSecurityTest {
 
     private static final String ENDPOINT = "/api/bookings/DP001/check-in";
+    private static final String PENDING_ENDPOINT = "/api/bookings/pending-check-in";
 
     @Autowired
     private MockMvc mockMvc;
@@ -56,6 +65,58 @@ class CheckInControllerSecurityTest {
                 .andExpect(status().isUnauthorized());
 
         verifyNoInteractions(checkInService);
+    }
+
+    @Test
+    void pendingBookingsRejectsRequestWithoutToken() throws Exception {
+        mockMvc.perform(get(PENDING_ENDPOINT))
+                .andExpect(status().isUnauthorized());
+
+        verifyNoInteractions(checkInService);
+    }
+
+    @Test
+    void pendingBookingsRejectsCustomerRole() throws Exception {
+        authenticate("customer-token", "khach1", VaiTro.KHACH_HANG);
+
+        mockMvc.perform(get(PENDING_ENDPOINT)
+                        .header("Authorization", "Bearer customer-token"))
+                .andExpect(status().isForbidden());
+
+        verifyNoInteractions(checkInService);
+    }
+
+    @Test
+    void receptionistCanSearchPendingBookings() throws Exception {
+        authenticate("reception-token", "letan1", VaiTro.LE_TAN);
+        when(checkInService.getPendingBookings("0912345678"))
+                .thenReturn(List.of(pendingBooking()));
+
+        mockMvc.perform(get(PENDING_ENDPOINT)
+                        .param("keyword", "0912345678")
+                        .header("Authorization", "Bearer reception-token"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].bookingCode").value("DP001"))
+                .andExpect(jsonPath("$[0].guestName").value("Nguyễn Văn An"))
+                .andExpect(jsonPath("$[0].phone").value("0912345678"))
+                .andExpect(jsonPath("$[0].bookingStatus").value("DA_DAT"))
+                .andExpect(jsonPath("$[0].rooms[0].roomNumber").value("101"))
+                .andExpect(jsonPath("$[0].rooms[0].cleaningStatus").value("DA_DON_XONG"));
+
+        verify(checkInService).getPendingBookings("0912345678");
+    }
+
+    @Test
+    void hotelOwnerCanViewPendingBookings() throws Exception {
+        authenticate("owner-token", "owner", VaiTro.CHU_KHACH_SAN);
+        when(checkInService.getPendingBookings(null)).thenReturn(List.of());
+
+        mockMvc.perform(get(PENDING_ENDPOINT)
+                        .header("Authorization", "Bearer owner-token"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$").isArray());
+
+        verify(checkInService).getPendingBookings(null);
     }
 
     @Test
@@ -173,5 +234,29 @@ class CheckInControllerSecurityTest {
 
         when(taiKhoanDetailsService.loadUserByUsername(username))
                 .thenReturn(new TaiKhoanDetails(account));
+    }
+
+    private PendingCheckInBookingResponse pendingBooking() {
+        PendingCheckInRoomResponse room = new PendingCheckInRoomResponse(
+                "room-id",
+                "101",
+                "Deluxe",
+                1,
+                2,
+                LocalDate.of(2026, 10, 20),
+                LocalDate.of(2026, 10, 22),
+                2,
+                UsageStatus.DA_DAT,
+                CleaningStatus.DA_DON_XONG);
+
+        return new PendingCheckInBookingResponse(
+                "DP001",
+                "Nguyễn Văn An",
+                "0912345678",
+                "an@example.com",
+                new BigDecimal("2400000"),
+                new BigDecimal("720000"),
+                BookingStatus.DA_DAT,
+                List.of(room));
     }
 }
