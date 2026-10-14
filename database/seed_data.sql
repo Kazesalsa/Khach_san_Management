@@ -765,6 +765,14 @@ UPDATE phong SET trang_thai_su_dung = 'DANG_O'
 WHERE id IN (SELECT phong_id FROM chi_tiet_dat_phong WHERE trang_thai = 'DA_NHAN');
 
 -- ============================================================
+-- Đồng bộ phieu_dat_phong_id cho hóa đơn từ chi_tiet_dat_phong
+-- ============================================================
+UPDATE hoa_don hd 
+SET phieu_dat_phong_id = ct.phieu_dat_phong_id 
+FROM chi_tiet_dat_phong ct 
+WHERE ct.hoa_don_id = hd.id AND hd.phieu_dat_phong_id IS NULL;
+
+-- ============================================================
 -- KIỂM TRA TÍNH NHẤT QUÁN DỮ LIỆU
 -- Nếu vi phạm bất kỳ quy tắc nào, script sẽ dừng với thông báo lỗi
 -- ============================================================

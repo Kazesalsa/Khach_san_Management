@@ -290,7 +290,7 @@ CREATE OR REPLACE VIEW v_chi_tiet_doanh_thu AS
 SELECT
     hd.id AS ma_hoa_don,
     ct.id AS ma_chi_tiet_dat_phong,
-    hd.thoi_gian_chot AS thoi_gian_doanh_thu,
+    COALESCE(hd.thoi_gian_chot, hd.ngay_lap) AS thoi_gian_doanh_thu,
     hd.trang_thai AS trang_thai_hoa_don,
     lp.id AS ma_loai_phong,
     lp.ten AS ten_loai_phong,
@@ -298,7 +298,7 @@ SELECT
     hd.tien_dich_vu AS doanh_thu_dich_vu,
     hd.tong_tien AS tong_doanh_thu
 FROM hoa_don hd
-JOIN chi_tiet_dat_phong ct ON ct.hoa_don_id = hd.id
+JOIN chi_tiet_dat_phong ct ON (ct.hoa_don_id = hd.id OR (hd.phieu_dat_phong_id IS NOT NULL AND ct.phieu_dat_phong_id = hd.phieu_dat_phong_id))
 JOIN phong p ON p.id = ct.phong_id
 JOIN loai_phong lp ON lp.id = p.ma_loai_phong
 WHERE hd.trang_thai IN ('DA_THANH_TOAN', 'DA_CHOT');
