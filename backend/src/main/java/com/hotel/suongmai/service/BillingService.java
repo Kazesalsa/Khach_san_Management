@@ -62,8 +62,9 @@ public class BillingService {
          */
         var existingInvoice = hoaDonRepository.findByBookingId(booking.getId());
 
+        HoaDon invoice;
         if (existingInvoice.isPresent()) {
-            HoaDon invoice = existingInvoice.get();
+            invoice = existingInvoice.get();
 
             if (invoice.getStatus() == TrangThaiHoaDon.DA_THANH_TOAN || invoice.getStatus() == TrangThaiHoaDon.DA_CHOT) {
                ThanhToan payment = thanhToanRepository
@@ -88,6 +89,10 @@ public class BillingService {
                     "Hóa đơn đã được thanh toán trước đó"
                );
             }
+        } else {
+            invoice = new HoaDon();
+            invoice.setInvoiceNumber(generateUniqueInvoiceNumber());
+            invoice.setBooking(booking);
         }
 
         NhanVien cashier = nhanVienRepository
@@ -96,9 +101,12 @@ public class BillingService {
 
         InvoiceCalculation calculation = calculateInvoice(booking);
 
-        HoaDon invoice = new HoaDon();
-        invoice.setInvoiceNumber(generateUniqueInvoiceNumber());
-        invoice.setBooking(booking);
+        if (invoice.getInvoiceNumber() == null) {
+            invoice.setInvoiceNumber(generateUniqueInvoiceNumber());
+        }
+        if (invoice.getBooking() == null) {
+            invoice.setBooking(booking);
+        }
         invoice.setRoomFee(calculation.roomFee());
         invoice.setServiceFee(calculation.serviceFee());
         invoice.setDeductedDeposit(calculation.deposit());
@@ -107,6 +115,12 @@ public class BillingService {
         invoice.setStatus(TrangThaiHoaDon.DA_THANH_TOAN);
 
         invoice = hoaDonRepository.save(invoice);
+
+        List<BookingDetail> details = bookingDetailRepository.findByBookingId(booking.getId());
+        for (BookingDetail detail : details) {
+            detail.setInvoice(invoice);
+            bookingDetailRepository.save(detail);
+        }
 
         BigDecimal remainingToPay = calculation.remaining().max(BigDecimal.ZERO);
         if (remainingToPay.compareTo(BigDecimal.ZERO) > 0) {

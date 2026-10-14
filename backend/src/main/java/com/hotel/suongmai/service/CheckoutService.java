@@ -120,29 +120,9 @@ public class CheckoutService {
         booking.setStatus(BookingStatus.DA_TRA_PHONG);
         bookingRepository.save(booking);
 
-        // 4. Cập nhật chi tiết đặt phòng, đổi trạng thái phòng và chốt hóa đơn
+        // 4. Chốt hóa đơn và cập nhật chi tiết đặt phòng, đổi trạng thái phòng
         List<BookingDetail> details = bookingDetailRepository.findByBookingId(booking.getId());
         List<String> roomNumbers = new ArrayList<>();
-
-        for (BookingDetail detail : details) {
-            detail.setActualCheckOutTime(now);
-            detail.setStatus("DA_TRA_PHONG");
-
-            if (staff != null) {
-                detail.setCheckOutStaff(staff);
-            }
-
-            bookingDetailRepository.save(detail);
-
-            Room room = detail.getRoom();
-
-            if (room != null) {
-                room.setUsageStatus(UsageStatus.TRONG);
-                room.setCleaningStatus(CleaningStatus.CHUA_DON);
-                roomRepository.save(room);
-                roomNumbers.add(room.getRoomNumber());
-            }
-        }
 
         invoice.setStatus(TrangThaiHoaDon.DA_CHOT);
         invoice.setFinalizedAt(now);
@@ -153,6 +133,28 @@ public class CheckoutService {
         }
 
         hoaDonRepository.save(invoice);
+
+        for (BookingDetail detail : details) {
+            detail.setActualCheckOutTime(now);
+            detail.setStatus("DA_TRA_PHONG");
+            detail.setInvoice(invoice);
+
+            if (staff != null) {
+                detail.setCheckOutStaff(staff);
+            }
+
+            bookingDetailRepository.save(detail);
+
+
+            Room room = detail.getRoom();
+
+            if (room != null) {
+                room.setUsageStatus(UsageStatus.TRONG);
+                room.setCleaningStatus(CleaningStatus.CHUA_DON);
+                roomRepository.save(room);
+                roomNumbers.add(room.getRoomNumber());
+            }
+        }
 
         String staffName = staff != null ? (staff.getHoNv() + " " + staff.getTenNv()) : (username != null ? username : "Lễ tân");
         log.info("Lễ tân {} đã hoàn tất trả phòng cho booking {} (các phòng: {})",

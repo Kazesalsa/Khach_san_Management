@@ -133,11 +133,13 @@ public class PaymentService {
             throw new IllegalArgumentException("Đặt phòng đã thanh toán đủ, không cần thu thêm.");
         }
 
-        HoaDon invoice = bookingDetailRepository.findByBookingId(booking.getId()).stream()
-                .map(BookingDetail::getInvoice)
-                .filter(Objects::nonNull)
-                .findFirst()
-                .orElse(null);
+        final String bookingId = booking.getId();
+        HoaDon invoice = hoaDonRepository.findByBookingId(bookingId)
+                .orElseGet(() -> bookingDetailRepository.findByBookingId(bookingId).stream()
+                        .map(BookingDetail::getInvoice)
+                        .filter(Objects::nonNull)
+                        .findFirst()
+                        .orElse(null));
 
         String returnUrl = (request.getReturnUrl() != null && !request.getReturnUrl().isBlank())
                 ? request.getReturnUrl()
@@ -318,6 +320,9 @@ public class PaymentService {
                 }
             } else if (thanhToan.getTransactionType() == LoaiGiaoDich.THANH_TOAN_HOA_DON) {
                 HoaDon invoice = thanhToan.getInvoice();
+                if (invoice == null && booking != null) {
+                    invoice = hoaDonRepository.findByBookingId(booking.getId()).orElse(null);
+                }
                 if (invoice != null) {
                     invoice.setStatus(TrangThaiHoaDon.DA_THANH_TOAN);
                     invoice.setRemainingAmount(BigDecimal.ZERO);
