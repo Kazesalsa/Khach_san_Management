@@ -176,7 +176,7 @@ public class BillingService {
         BigDecimal subtotal = roomFee.add(serviceFee);
 
         BigDecimal deposit = valueOrZero(
-                thanhToanRepository.sumSuccessfulDepositByBookingId(booking.getId())
+                thanhToanRepository.sumPaidByBooking(booking.getId())
         );
 
         BigDecimal remaining = subtotal

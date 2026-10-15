@@ -23,7 +23,6 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Objects;
@@ -38,8 +37,6 @@ public class PaymentService {
     private final PayOS payOS;
     private final BookingRepository bookingRepository;
     private final BookingDetailRepository bookingDetailRepository;
-    private final RoomRepository roomRepository;
-    private final RoomCategoryRepository roomCategoryRepository;
     private final KhachHangRepository khachHangRepository;
     private final NhanVienRepository nhanVienRepository;
     private final ThanhToanRepository thanhToanRepository;
@@ -59,19 +56,16 @@ public class PaymentService {
     public PaymentLinkResponse createDepositPaymentLink(CreateDepositPaymentRequest request, String username) {
         log.info("Khởi tạo thanh toán đặt cọc PayOS cho booking: {}", request.getBookingCode());
 
-        Booking booking = (request.getBookingCode() != null && !request.getBookingCode().isBlank())
-                ? bookingRepository.findByBookingCode(request.getBookingCode().trim()).orElse(null)
-                : null;
+        String bookingCode = request.getBookingCode() != null ? request.getBookingCode().trim() : "";
+        Booking booking = bookingRepository.findByBookingCode(bookingCode.trim())
+                .orElseThrow(() -> new BookingNotFoundException(
+                    "Không tìm thấy đặt phòng với mã: " + request.getBookingCode() + ". Vui lòng tạo đặt phòng trước khi thanh toán cọc."));
 
-        if (booking == null) {
-            booking = createBookingFromDepositRequest(request, username);
-        } else {
-            if (booking.getCustomer() != null && request.getEmail() != null && !request.getEmail().isBlank()) {
-                KhachHang c = booking.getCustomer();
-                if (c.getEmail() == null || !c.getEmail().equalsIgnoreCase(request.getEmail().trim())) {
-                    c.setEmail(request.getEmail().trim());
-                    khachHangRepository.save(c);
-                }
+        if (booking.getCustomer() != null && request.getEmail() != null && !request.getEmail().isBlank()) {
+            KhachHang c = booking.getCustomer();
+            if (c.getEmail() == null || !c.getEmail().equalsIgnoreCase(request.getEmail().trim())) {
+                c.setEmail(request.getEmail().trim());
+                khachHangRepository.save(c);
             }
         }
 
@@ -103,17 +97,6 @@ public class PaymentService {
 
         Booking booking = bookingRepository.findByBookingCode(bookingCode)
                 .orElse(null);
-
-        if (booking == null) {
-            // Fallback tìm booking có trạng thái phù hợp hoặc bất kỳ booking nào để hỗ trợ kiểm thử giao diện lễ tân
-            booking = bookingRepository.findAll().stream()
-                    .filter(b -> b.getStatus() == BookingStatus.DA_NHAN || b.getStatus() == BookingStatus.DA_DAT)
-                    .findFirst()
-                    .orElse(null);
-            if (booking == null) {
-                booking = bookingRepository.findAll().stream().findFirst().orElse(null);
-            }
-        }
 
         if (booking == null) {
             throw new BookingNotFoundException("Không tìm thấy đặt phòng với mã: " + bookingCode);
@@ -309,6 +292,14 @@ public class PaymentService {
             if (thanhToan.getTransactionType() == LoaiGiaoDich.TIEN_COC) {
                 if (booking.getStatus() == BookingStatus.CHO_XAC_NHAN) {
                     booking.setStatus(BookingStatus.DA_DAT);
+
+                    //Cập nhật các chi_tiet_dat_phong liên quan sang trangj thái đã nhận
+                    List<BookingDetail> details = bookingDetailRepository.findByBookingId(booking.getId());
+                    for (BookingDetail detail : details) {
+                        detail.setStatus("DA_DAT");
+                    }
+                    bookingDetailRepository.saveAll(details);
+
                     bookingRepository.save(booking);
                     log.info("Cập nhật booking {} sang trạng thái DA_DAT sau khi thanh toán cọc thành công", booking.getBookingCode());
                 }
@@ -385,129 +376,6 @@ public class PaymentService {
             log.error("Lỗi gửi yêu cầu sang PayOS: {}", e.getMessage(), e);
             throw new RuntimeException("Lỗi kết nối tới cổng thanh toán PayOS: " + e.getMessage());
         }
-    }
-
-    private Booking createBookingFromDepositRequest(CreateDepositPaymentRequest request, String username) {
-        String code = (request.getBookingCode() != null && !request.getBookingCode().isBlank())
-                ? request.getBookingCode()
-                : "SM-" + (100000 + (int)(Math.random() * 900000));
-
-        String phone = (request.getPhone() != null && !request.getPhone().isBlank()) ? request.getPhone().trim() : "0900000000";
-        KhachHang customer = null;
-        if (request.getPhone() != null && !request.getPhone().isBlank()) {
-            customer = khachHangRepository.findBySoDienThoai(request.getPhone().trim()).orElse(null);
-        }
-        if (customer == null && request.getEmail() != null && !request.getEmail().isBlank()) {
-            customer = khachHangRepository.findByEmail(request.getEmail().trim()).orElse(null);
-        }
-
-        if (customer == null) {
-            customer = new KhachHang();
-            customer.setHoTen(request.getGuestName() != null && !request.getGuestName().isBlank() ? request.getGuestName().trim() : "Khách Lưu Trú");
-            customer.setSoDienThoai(phone);
-            customer.setEmail(request.getEmail() != null && !request.getEmail().isBlank() ? request.getEmail().trim() : null);
-            customer.setNgayTao(LocalDateTime.now());
-            customer = khachHangRepository.save(customer);
-        } else {
-            boolean changed = false;
-            if (request.getEmail() != null && !request.getEmail().isBlank() && (customer.getEmail() == null || !customer.getEmail().equalsIgnoreCase(request.getEmail().trim()))) {
-                customer.setEmail(request.getEmail().trim());
-                changed = true;
-            }
-            if (request.getGuestName() != null && !request.getGuestName().isBlank() && (customer.getHoTen() == null || customer.getHoTen().isBlank() || "Khách Lưu Trú".equals(customer.getHoTen()))) {
-                customer.setHoTen(request.getGuestName().trim());
-                changed = true;
-            }
-            if (changed) {
-                customer = khachHangRepository.save(customer);
-            }
-        }
-
-        Booking booking = new Booking();
-        booking.setBookingCode(code);
-        booking.setCustomer(customer);
-        booking.setCreator(resolveStaff(username));
-        booking.setBookingChannel("WEBSITE");
-        booking.setEstimatedTotal(request.getTotalAmount() != null ? request.getTotalAmount() : BigDecimal.valueOf(1000000));
-        booking.setRequiredDeposit(request.getDepositAmount() != null ? request.getDepositAmount() : BigDecimal.valueOf(300000));
-        booking.setStatus(BookingStatus.CHO_XAC_NHAN);
-        booking = bookingRepository.save(booking);
-
-        LocalDate checkInDate = request.getCheckIn() != null ? LocalDate.parse(request.getCheckIn()) : LocalDate.now();
-        LocalDate checkOutDate = request.getCheckOut() != null ? LocalDate.parse(request.getCheckOut()) : checkInDate.plusDays(1);
-
-        // Tìm danh sách các phòng thực sự còn trống trong khoảng ngày đặt
-        List<Room> availableRooms = roomRepository.findAvailableRooms(checkInDate, checkOutDate);
-
-        Room room = null;
-        // 1. Khớp theo roomId hoặc số phòng nếu khách chọn phòng cụ thể
-        if (request.getRoomId() != null && !request.getRoomId().isBlank()) {
-            room = availableRooms.stream()
-                    .filter(r -> r.getId().equalsIgnoreCase(request.getRoomId())
-                            || (r.getRoomNumber() != null && r.getRoomNumber().equalsIgnoreCase(request.getRoomId())))
-                    .findFirst()
-                    .orElse(null);
-        }
-
-        // 2. Khớp theo loại phòng (mã loại phòng, tên loại phòng hoặc tên phòng gửi lên)
-        if (room == null) {
-            String targetCatId = request.getRoomCategoryId() != null ? request.getRoomCategoryId().trim().toLowerCase() : "";
-            String targetRoomName = request.getRoomName() != null ? request.getRoomName().trim().toLowerCase() : "";
-
-            room = availableRooms.stream()
-                    .filter(r -> {
-                        if (r.getRoomCategory() == null) return false;
-                        String cId = r.getRoomCategory().getId() != null ? r.getRoomCategory().getId().toLowerCase() : "";
-                        String cName = r.getRoomCategory().getName() != null ? r.getRoomCategory().getName().toLowerCase() : "";
-
-                        // Khớp ID loại phòng (ví dụ: cat-3)
-                        if (!targetCatId.isEmpty() && (cId.equals(targetCatId) || targetCatId.contains(cId) || cId.contains(targetCatId))) {
-                            return true;
-                        }
-                        // Khớp tên loại phòng (ví dụ: targetCatId="deluxe" khớp với cName="deluxe")
-                        if (!targetCatId.isEmpty() && (cName.contains(targetCatId) || targetCatId.contains(cName))) {
-                            return true;
-                        }
-                        // Khớp theo tên phòng gửi lên (ví dụ: targetRoomName="Deluxe Cổ Điển..." chứa cName="deluxe")
-                        if (!targetRoomName.isEmpty() && targetRoomName.contains(cName)) {
-                            return true;
-                        }
-                        return false;
-                    })
-                    .findFirst()
-                    .orElse(null);
-        }
-
-        // 3. Nếu loại phòng này đã hết phòng trống trong khoảng ngày, gán một phòng trống bất kỳ
-        if (room == null && !availableRooms.isEmpty()) {
-            room = availableRooms.get(0);
-        }
-
-        // 4. Fallback cuối cùng nếu toàn bộ khách sạn đã kín phòng trong khoảng thời gian này
-        if (room == null) {
-            if (request.getRoomId() != null && !request.getRoomId().isBlank()) {
-                room = roomRepository.findById(request.getRoomId())
-                        .or(() -> roomRepository.findByRoomNumber(request.getRoomId()))
-                        .orElse(null);
-            }
-            if (room == null && request.getRoomCategoryId() != null && !request.getRoomCategoryId().isBlank()) {
-                room = roomRepository.findByRoomCategory_Id(request.getRoomCategoryId()).stream().findFirst().orElse(null);
-            }
-            if (room == null) {
-                room = roomRepository.findAll().stream().findFirst().orElse(null);
-            }
-        }
-
-        BookingDetail detail = new BookingDetail();
-        detail.setBooking(booking);
-        detail.setRoom(room);
-        detail.setExpectedCheckInDate(checkInDate);
-        detail.setExpectedCheckOutDate(checkOutDate);
-        detail.setGuestCount(request.getAdults() != null ? request.getAdults() : 2);
-        detail.setStatus(BookingStatus.CHO_XAC_NHAN.name());
-        bookingDetailRepository.save(detail);
-
-        return booking;
     }
 
     private NhanVien resolveStaff(String username) {

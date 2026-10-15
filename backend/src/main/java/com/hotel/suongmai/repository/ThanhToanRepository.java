@@ -20,11 +20,6 @@ public interface ThanhToanRepository extends JpaRepository<ThanhToan, String> {
             "AND t.transactionType IN ('TIEN_COC', 'THANH_TOAN_HOA_DON')")
     BigDecimal sumPaidByBooking(@Param("bookingId") String bookingId);
 
-    @Query("SELECT COALESCE(SUM(t.amount), 0) FROM ThanhToan t " +
-            "WHERE t.booking.id = :bookingId " +
-            "AND t.transactionType = 'TIEN_COC' " +
-            "AND t.status = 'THANH_CONG'")
-    BigDecimal sumSuccessfulDepositByBookingId(@Param("bookingId") String bookingId);
     Optional<ThanhToan> findFirstByInvoiceIdAndTransactionTypeAndStatusOrderByTransactionTimeDesc(
             String invoiceId,
             LoaiGiaoDich transactionType,

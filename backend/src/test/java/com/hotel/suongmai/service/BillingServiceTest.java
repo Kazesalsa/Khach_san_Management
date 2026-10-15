@@ -80,7 +80,7 @@ class BillingServiceTest {
                 .thenReturn(List.of(firstNight, secondNight));
         when(suDungDichVuRepository.findByBookingId("booking-1"))
                 .thenReturn(List.of(serviceUsage));
-        when(thanhToanRepository.sumSuccessfulDepositByBookingId("booking-1"))
+        when(thanhToanRepository.sumPaidByBooking("booking-1"))
                 .thenReturn(new BigDecimal("200000"));
 
         InvoicePreviewResponse response = billingService.previewInvoice("BOOK-001");
@@ -125,7 +125,7 @@ class BillingServiceTest {
                 .thenReturn(List.of(priceWithoutAmount));
         when(suDungDichVuRepository.findByBookingId("booking-1"))
                 .thenReturn(List.of(usageWithoutAmount));
-        when(thanhToanRepository.sumSuccessfulDepositByBookingId("booking-1"))
+        when(thanhToanRepository.sumPaidByBooking("booking-1"))
                 .thenReturn(null);
 
         InvoicePreviewResponse response = billingService.previewInvoice("BOOK-001");
@@ -154,7 +154,7 @@ class BillingServiceTest {
                         detail, LocalDate.of(2026, 10, 10), "500000", "price-1")));
         when(suDungDichVuRepository.findByBookingId("booking-1"))
                 .thenReturn(List.of());
-        when(thanhToanRepository.sumSuccessfulDepositByBookingId("booking-1"))
+        when(thanhToanRepository.sumPaidByBooking("booking-1"))
                 .thenReturn(new BigDecimal("800000"));
 
         InvoicePreviewResponse response = billingService.previewInvoice("BOOK-001");
